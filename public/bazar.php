@@ -5,6 +5,16 @@ require_once '../config/database.php';
 $message = '';
 $message_type = '';
 
+// Fetch persons for dropdown
+$persons = [];
+$person_result = $conn->query("SELECT id, name FROM persons ORDER BY name");
+if ($person_result) {
+    while ($row = $person_result->fetch_assoc()) {
+        $persons[] = $row;
+    }
+    $person_result->free();
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Get form data
@@ -12,23 +22,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $item_name = $_POST['item_name'] ?? '';
     $category = $_POST['category'] ?? '';
     $amount = $_POST['amount'] ?? '';
+    $paid_by = $_POST['paid_by'] ?? '';
     
     // Basic validation
-    if (empty($bazar_date) || empty($item_name) || empty($category) || empty($amount)) {
+    if (empty($bazar_date) || empty($item_name) || empty($category) || empty($amount) || empty($paid_by)) {
         $message = 'Please fill all required fields';
         $message_type = 'error';
     } elseif (!is_numeric($amount) || $amount <= 0) {
         $message = 'Please enter a valid amount';
         $message_type = 'error';
     } else {
-        // Prepare SQL statement
-        $sql = "INSERT INTO bazar_items (bazar_date, item_name, category, amount) 
-                VALUES (?, ?, ?, ?)";
+        // Prepare SQL statement with paid_by
+        $sql = "INSERT INTO bazar_items (bazar_date, item_name, category, amount, paid_by) 
+                VALUES (?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
         
         if ($stmt) {
-            // Bind parameters
-            $stmt->bind_param("sssd", $bazar_date, $item_name, $category, $amount);
+            // Bind parameters (s=string, d=double, i=integer)
+            $stmt->bind_param("sssdi", $bazar_date, $item_name, $category, $amount, $paid_by);
             
             // Execute query
             if ($stmt->execute()) {
@@ -132,6 +143,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                            required>
                     <p class="text-sm text-gray-500 mt-1">Enter the cost of this item</p>
+                </div>
+
+                <!-- Paid By -->
+                <div>
+                    <label for="paid_by" class="block text-sm font-medium text-gray-700 mb-2">
+                        Paid By *
+                    </label>
+                    <select id="paid_by" 
+                            name="paid_by" 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            required>
+                        <option value="">Select who paid</option>
+                        <?php foreach ($persons as $person): ?>
+                            <option value="<?php echo $person['id']; ?>">
+                                <?php echo htmlspecialchars($person['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="text-sm text-gray-500 mt-1">Select the person who paid for this bazar item</p>
                 </div>
 
                 <!-- Submit Button -->
