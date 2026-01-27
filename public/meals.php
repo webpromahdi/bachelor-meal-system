@@ -347,7 +347,7 @@ $load_stmt->close();
                                 'chicken' => ['icon' => '🍗', 'label' => 'Chicken', 'color' => 'red'],
                                 'dim' => ['icon' => '🥚', 'label' => 'Dim (Egg)', 'color' => 'yellow'],
                                 'other' => ['icon' => '🥗', 'label' => 'Other', 'color' => 'gray'],
-                                'friday' => ['icon' => '🍛', 'label' => 'Friday', 'color' => 'purple']
+                                'special' => ['icon' => '⭐', 'label' => 'Special Meal', 'color' => 'pink']
                             ];
                             foreach ($lunch_types as $value => $type): 
                                 $is_selected = ($existing_lunch_type === $value) ? 'checked' : '';

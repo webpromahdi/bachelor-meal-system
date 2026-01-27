@@ -9,24 +9,24 @@ CREATE TABLE IF NOT EXISTS persons (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: daily_meals
--- meal_type includes: chicken, fish, dim (egg), other (veg), friday
+-- meal_type includes: chicken, fish, dim (egg), other (veg), special
 CREATE TABLE IF NOT EXISTS daily_meals (
     id INT AUTO_INCREMENT PRIMARY KEY,
     meal_date DATE NOT NULL,
     person_id INT NOT NULL,
     session ENUM('lunch', 'dinner') NOT NULL,
-    meal_type ENUM('chicken', 'fish', 'dim', 'other', 'friday') NOT NULL,
+    meal_type ENUM('chicken', 'fish', 'dim', 'other', 'special') NOT NULL,
     guest_count INT DEFAULT 0,
     FOREIGN KEY (person_id) REFERENCES persons(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: bazar_items
--- category includes: chicken, fish, dim (egg), other, rice (person-wise), friday
+-- category includes: chicken, fish, dim (egg), other, rice (person-wise), special
 CREATE TABLE IF NOT EXISTS bazar_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     bazar_date DATE NOT NULL,
     item_name VARCHAR(255) NOT NULL,
-    category ENUM('chicken', 'fish', 'dim', 'other', 'rice', 'friday') NOT NULL,
+    category ENUM('chicken', 'fish', 'dim', 'other', 'rice', 'special') NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
     paid_by INT,
     FOREIGN KEY (paid_by) REFERENCES persons(id) ON DELETE SET NULL
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS bazar_items (
 -- ============================================
 
 -- Add 'dim' to daily_meals.meal_type ENUM
--- ALTER TABLE daily_meals MODIFY COLUMN meal_type ENUM('chicken', 'fish', 'dim', 'other', 'friday') NOT NULL;
+-- ALTER TABLE daily_meals MODIFY COLUMN meal_type ENUM('chicken', 'fish', 'dim', 'other', 'special') NOT NULL;
 
 -- Add 'dim' and 'rice' to bazar_items.category ENUM
--- ALTER TABLE bazar_items MODIFY COLUMN category ENUM('chicken', 'fish', 'dim', 'other', 'rice', 'friday') NOT NULL;
+-- ALTER TABLE bazar_items MODIFY COLUMN category ENUM('chicken', 'fish', 'dim', 'other', 'rice', 'special') NOT NULL;

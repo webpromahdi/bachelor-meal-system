@@ -4,20 +4,19 @@
  * 
  * DESIGN PRINCIPLES:
  * 1. Category-wise bulk input (not item-wise)
- * 2. Fixed categories: Chicken, Fish, Dim (Egg), Other, Rice
+ * 2. Fixed categories: Chicken, Fish, Dim (Egg), Other, Special, Rice
  * 3. One date picker, one "Paid By" dropdown
  * 4. Amount input for EACH category
- * 5. Friday Special checkbox for special meal handling
  * 
  * DATABASE INSERT LOGIC:
  * - Insert ONE row per category into bazar_items (if amount > 0)
- * - Categories: chicken, fish, dim, other, friday, rice
+ * - Categories: chicken, fish, dim, other, special, rice
  * - Rice is saved as SEPARATE 'rice' category (cost-only, no meal count)
  * 
- * FRIDAY SPECIAL RULES:
- * - Friday Special is SEPARATE from Other category
- * - When Friday Special is checked, Other is hidden for that day
- * - Friday Special cost distributed only among Friday lunch eaters
+ * SPECIAL MEAL RULES:
+ * - Special Meal is a regular category like Chicken/Fish
+ * - Special Meal cost distributed among those who ate Special meals
+ * - Special Meal is independent, no dependency on Chicken/Fish
  */
 
 require_once '../config/database.php';
@@ -42,15 +41,14 @@ if ($person_result) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
     $bazar_date = $_POST['bazar_date'] ?? '';
     $paid_by = $_POST['paid_by'] ?? '';
-    $is_friday_special = isset($_POST['friday_special']) ? true : false;
     
     // Get category amounts
     $chicken_amount = floatval($_POST['chicken_amount'] ?? 0);
     $fish_amount = floatval($_POST['fish_amount'] ?? 0);
     $dim_amount = floatval($_POST['dim_amount'] ?? 0);
     $other_amount = floatval($_POST['other_amount'] ?? 0);
+    $special_amount = floatval($_POST['special_amount'] ?? 0);
     $rice_amount = floatval($_POST['rice_amount'] ?? 0);
-    $friday_special_amount = floatval($_POST['friday_special_amount'] ?? 0);
     
     // Validation
     if (empty($bazar_date) || empty($paid_by)) {
@@ -113,7 +111,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
             // ============================================
             // INSERT DIM/EGG (if amount > 0)
             // Category: dim
-            // Dim is a FULL meal category (not part of Chicken or Other)
             // ============================================
             if ($dim_amount > 0) {
                 $item_name = 'Dim/Egg';
@@ -129,7 +126,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
             // ============================================
             // INSERT OTHER (if amount > 0)
             // Category: other
-            // NOTE: When Friday Special is checked, Other is hidden
             // ============================================
             if ($other_amount > 0) {
                 $item_name = 'Other/Vegetables';
@@ -143,39 +139,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
             }
             
             // ============================================
+            // INSERT SPECIAL MEAL (if amount > 0)
+            // Category: special
+            // Special Meal is a regular category like Chicken/Fish
+            // Cost distributed among Special meal eaters
+            // ============================================
+            if ($special_amount > 0) {
+                $item_name = 'Special Meal';
+                $category = 'special';
+                $insert_stmt->bind_param("sssdi", $bazar_date, $item_name, $category, $special_amount, $paid_by);
+                if (!$insert_stmt->execute()) {
+                    throw new Exception('Insert failed: ' . $insert_stmt->error);
+                }
+                $saved_summary['Special Meal'] = $special_amount;
+                $total_inserted++;
+            }
+            
+            // ============================================
             // INSERT RICE (if amount > 0)
             // Category: rice
             // RICE IS A SEPARATE COST-ONLY CATEGORY (PERSON-WISE)
-            // - Rice has NO meal count
-            // - Rice is NOT distributed by meals
-            // - Rice cost goes ONLY to the payer (paid_by)
-            // - Rice MUST be saved as its own category for proper tracking
             // ============================================
             if ($rice_amount > 0) {
                 $item_name = 'Rice (Chal)';
-                $category = 'rice';  // SEPARATE CATEGORY - not merged with 'other'
+                $category = 'rice';
                 $insert_stmt->bind_param("sssdi", $bazar_date, $item_name, $category, $rice_amount, $paid_by);
                 if (!$insert_stmt->execute()) {
                     throw new Exception('Insert failed: ' . $insert_stmt->error);
                 }
                 $saved_summary['Rice'] = $rice_amount;
-                $total_inserted++;
-            }
-            
-            // ============================================
-            // INSERT FRIDAY SPECIAL (if checked and amount > 0)
-            // Category: friday
-            // Friday Special is SEPARATE from Other category
-            // Cost distributed only among Friday lunch eaters
-            // ============================================
-            if ($is_friday_special && $friday_special_amount > 0) {
-                $item_name = 'Friday Special Meal';
-                $category = 'friday';
-                $insert_stmt->bind_param("sssdi", $bazar_date, $item_name, $category, $friday_special_amount, $paid_by);
-                if (!$insert_stmt->execute()) {
-                    throw new Exception('Insert failed: ' . $insert_stmt->error);
-                }
-                $saved_summary['Friday Special'] = $friday_special_amount;
                 $total_inserted++;
             }
             
@@ -222,10 +214,6 @@ while ($row = $load_result->fetch_assoc()) {
     }
 }
 $load_stmt->close();
-
-// Check if it's a Friday
-$is_friday = (date('N', strtotime($selected_date)) == 5);
-$has_friday_special = isset($existing_data['friday']);
 ?>
 
 <!DOCTYPE html>
@@ -252,10 +240,6 @@ $has_friday_special = isset($existing_data['friday']);
             outline: none;
             border-color: #3b82f6;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-        }
-        .hidden-category {
-            opacity: 0.4;
-            pointer-events: none;
         }
     </style>
 </head>
@@ -285,7 +269,7 @@ $has_friday_special = isset($existing_data['friday']);
         <!-- Header -->
         <div class="mb-6">
             <h1 class="text-2xl font-bold text-gray-800">🛒 Daily Bazar Entry</h1>
-            <p class="text-gray-600">Enter category-wise bazar amounts (Chicken, Fish, Dim, Other, Rice)</p>
+            <p class="text-gray-600">Enter category-wise bazar amounts (Chicken, Fish, Dim, Other, Special, Rice)</p>
         </div>
 
         <!-- Message Alert -->
@@ -329,9 +313,6 @@ $has_friday_special = isset($existing_data['friday']);
                                required>
                         <p class="text-sm text-gray-500 mt-1">
                             <?php echo date('l', strtotime($selected_date)); ?>
-                            <?php if ($is_friday): ?>
-                                <span class="text-purple-600 font-medium">(Friday - Special Meal Day!)</span>
-                            <?php endif; ?>
                         </p>
                     </div>
                     
@@ -353,40 +334,6 @@ $has_friday_special = isset($existing_data['friday']);
                             <?php endforeach; ?>
                         </select>
                     </div>
-                </div>
-            </div>
-
-            <!-- Friday Special Checkbox -->
-            <div class="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 mb-6">
-                <label class="flex items-center cursor-pointer">
-                    <input type="checkbox" 
-                           id="friday_special" 
-                           name="friday_special" 
-                           class="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                           <?php echo $has_friday_special ? 'checked' : ''; ?>
-                           onchange="toggleFridaySpecial()">
-                    <span class="ml-3 text-lg font-medium text-purple-800">
-                        🍛 Friday Special Meal (Lunch Only)
-                    </span>
-                </label>
-                <p class="text-purple-600 text-sm mt-1 ml-8">
-                    Check this if today has a special Friday meal. Cost will be distributed only among those who ate Friday lunch.
-                    <br><strong>Note:</strong> Friday Special is ADDITIONAL - you can still enter Other category items.
-                </p>
-                
-                <!-- Friday Special Amount (shown when checked) -->
-                <div id="friday_special_section" class="mt-4 ml-8 <?php echo $has_friday_special ? '' : 'hidden'; ?>">
-                    <label class="block text-sm font-medium text-purple-700 mb-2">
-                        Friday Special Total Cost (BDT) *
-                    </label>
-                    <input type="number" 
-                           name="friday_special_amount" 
-                           id="friday_special_amount"
-                           value="<?php echo $existing_data['friday'] ?? ''; ?>"
-                           step="0.01" 
-                           min="0"
-                           placeholder="0.00"
-                           class="w-full md:w-64 px-4 py-3 border-2 border-purple-300 rounded-lg amount-input bg-white text-purple-800">
                 </div>
             </div>
 
@@ -429,7 +376,7 @@ $has_friday_special = isset($existing_data['friday']);
                     </div>
                 </div>
                 
-                <!-- Dim (Egg) Card - FULL MEAL CATEGORY -->
+                <!-- Dim (Egg) Card -->
                 <div class="category-card bg-yellow-50 border-2 border-yellow-200 rounded-lg p-5">
                     <div class="flex items-center mb-3">
                         <span class="text-3xl mr-3">🥚</span>
@@ -448,8 +395,8 @@ $has_friday_special = isset($existing_data['friday']);
                     <p class="text-yellow-600 text-xs mt-2">Full meal category (not part of Other)</p>
                 </div>
                 
-                <!-- Other/Vegetables Card - ALWAYS VISIBLE (meal-based category) -->
-                <div id="other_card" class="category-card bg-green-50 border-2 border-green-200 rounded-lg p-5">
+                <!-- Other/Vegetables Card -->
+                <div class="category-card bg-green-50 border-2 border-green-200 rounded-lg p-5">
                     <div class="flex items-center mb-3">
                         <span class="text-3xl mr-3">🥗</span>
                         <h3 class="text-lg font-bold text-green-800">Other / Vegetables</h3>
@@ -459,7 +406,6 @@ $has_friday_special = isset($existing_data['friday']);
                         <span class="text-green-600 mr-2">BDT</span>
                         <input type="number" 
                                name="other_amount" 
-                               id="other_amount"
                                value="<?php echo $existing_data['other'] ?? ''; ?>"
                                step="0.01" 
                                min="0"
@@ -469,7 +415,27 @@ $has_friday_special = isset($existing_data['friday']);
                     <p class="text-green-600 text-xs mt-2">Spices, oil, vegetables - shared by all meals</p>
                 </div>
                 
-                <!-- Rice Card - PERSON-WISE INVESTMENT (NOT merged with Other) -->
+                <!-- Special Meal Card -->
+                <div class="category-card bg-pink-50 border-2 border-pink-200 rounded-lg p-5">
+                    <div class="flex items-center mb-3">
+                        <span class="text-3xl mr-3">⭐</span>
+                        <h3 class="text-lg font-bold text-pink-800">Special Meal</h3>
+                        <span class="ml-2 px-2 py-1 bg-pink-200 text-pink-800 text-xs font-bold rounded">Meal-based</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-pink-600 mr-2">BDT</span>
+                        <input type="number" 
+                               name="special_amount" 
+                               value="<?php echo $existing_data['special'] ?? ''; ?>"
+                               step="0.01" 
+                               min="0"
+                               placeholder="0.00"
+                               class="flex-1 px-4 py-3 border-2 border-pink-300 rounded-lg amount-input bg-white text-pink-800">
+                    </div>
+                    <p class="text-pink-600 text-xs mt-2">Special occasions - distributed among Special meal eaters</p>
+                </div>
+                
+                <!-- Rice Card -->
                 <div class="category-card bg-amber-50 border-2 border-amber-200 rounded-lg p-5">
                     <div class="flex items-center mb-3">
                         <span class="text-3xl mr-3">🍚</span>
@@ -510,14 +476,11 @@ $has_friday_special = isset($existing_data['friday']);
             <ul class="text-blue-700 text-sm space-y-1">
                 <li>• <strong>Chicken/Fish/Dim</strong> - Meal categories, cost shared by meal count</li>
                 <li>• <strong>Other (Vegetables/Oil/Spices)</strong> - <span class="font-bold text-green-700">Meal-based</span>, cost shared by ALL meals</li>
+                <li>• <strong>Special Meal</strong> - <span class="font-bold text-pink-700">Meal-based</span>, cost shared by Special meal eaters only</li>
                 <li>• <strong>Rice (Chal)</strong> - <span class="font-bold text-amber-700">PERSON-WISE</span>, cost goes ONLY to the payer</li>
-                <li>• <strong>Friday Special</strong> - Distributed only among Friday lunch eaters</li>
                 <li>• Leave amount as 0 or empty if nothing was purchased</li>
                 <li>• Re-submitting for same date/person will update existing entries</li>
             </ul>
-            <div class="mt-2 pt-2 border-t border-blue-200 text-xs text-blue-600">
-                <strong>Important:</strong> Other and Rice are SEPARATE categories - enter them independently!
-            </div>
         </div>
 
         <!-- Existing Entries for Today -->
@@ -540,30 +503,6 @@ $has_friday_special = isset($existing_data['friday']);
             </div>
         <?php endif; ?>
     </div>
-
-    <!-- JavaScript for Friday Special Toggle -->
-    <script>
-        function toggleFridaySpecial() {
-            const checkbox = document.getElementById('friday_special');
-            const section = document.getElementById('friday_special_section');
-            
-            if (checkbox.checked) {
-                // Show Friday Special input
-                section.classList.remove('hidden');
-            } else {
-                // Hide Friday Special input
-                section.classList.add('hidden');
-                document.getElementById('friday_special_amount').value = '';
-            }
-            // NOTE: Other category is ALWAYS visible
-            // Other and Friday Special are NOT mutually exclusive
-        }
-        
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            toggleFridaySpecial();
-        });
-    </script>
 </body>
 </html>
 <?php $conn->close(); ?>

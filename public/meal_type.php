@@ -272,9 +272,9 @@ if (isset($_SESSION['success_message'])) {
                                             </div>
                                         </label>
                                         <label class="flex-1">
-                                            <input type="radio" name="day_meal_type" value="friday" class="hidden peer">
-                                            <div class="peer-checked:bg-purple-600 peer-checked:text-white bg-purple-100 text-purple-800 rounded-lg p-2 text-center cursor-pointer type-option">
-                                                🍛 Friday
+                                            <input type="radio" name="day_meal_type" value="special" class="hidden peer">
+                                            <div class="peer-checked:bg-pink-600 peer-checked:text-white bg-pink-100 text-pink-800 rounded-lg p-2 text-center cursor-pointer type-option">
+                                                ⭐ Special
                                             </div>
                                         </label>
                                     </div>
@@ -314,9 +314,9 @@ if (isset($_SESSION['success_message'])) {
                                             </div>
                                         </label>
                                         <label class="flex-1">
-                                            <input type="radio" name="night_meal_type" value="friday" class="hidden peer">
-                                            <div class="peer-checked:bg-purple-600 peer-checked:text-white bg-purple-100 text-purple-800 rounded-lg p-2 text-center cursor-pointer type-option">
-                                                🍛 Friday
+                                            <input type="radio" name="night_meal_type" value="special" class="hidden peer">
+                                            <div class="peer-checked:bg-pink-600 peer-checked:text-white bg-pink-100 text-pink-800 rounded-lg p-2 text-center cursor-pointer type-option">
+                                                ⭐ Special
                                             </div>
                                         </label>
                                     </div>
@@ -379,10 +379,10 @@ if (isset($_SESSION['success_message'])) {
                 <h4 class="font-bold text-gray-800">Other</h4>
                 <p class="text-xs text-gray-600">Veg, eggs, etc.</p>
             </div>
-            <div class="bg-purple-50 border border-purple-200 rounded-lg p-3 text-center">
-                <div class="text-2xl mb-1">🍛</div>
-                <h4 class="font-bold text-purple-800">Friday</h4>
-                <p class="text-xs text-purple-600">Special meals</p>
+            <div class="bg-pink-50 border border-pink-200 rounded-lg p-3 text-center">
+                <div class="text-2xl mb-1">⭐</div>
+                <h4 class="font-bold text-pink-800">Special Meal</h4>
+                <p class="text-xs text-pink-600">Special occasions</p>
             </div>
         </div>
     </div>
