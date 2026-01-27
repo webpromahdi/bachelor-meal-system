@@ -340,11 +340,12 @@ $load_stmt->close();
                         <h3 class="font-bold text-amber-700 mb-3 flex items-center">
                             <span class="text-2xl mr-2">☀️</span> Lunch Meal Type
                         </h3>
-                        <div class="grid grid-cols-2 gap-2">
+                        <div class="grid grid-cols-3 gap-2">
                             <?php 
                             $lunch_types = [
                                 'fish' => ['icon' => '🐟', 'label' => 'Fish', 'color' => 'blue'],
                                 'chicken' => ['icon' => '🍗', 'label' => 'Chicken', 'color' => 'red'],
+                                'dim' => ['icon' => '🥚', 'label' => 'Dim (Egg)', 'color' => 'yellow'],
                                 'other' => ['icon' => '🥗', 'label' => 'Other', 'color' => 'gray'],
                                 'friday' => ['icon' => '🍛', 'label' => 'Friday', 'color' => 'purple']
                             ];
@@ -372,7 +373,7 @@ $load_stmt->close();
                         <h3 class="font-bold text-indigo-700 mb-3 flex items-center">
                             <span class="text-2xl mr-2">🌙</span> Dinner Meal Type
                         </h3>
-                        <div class="grid grid-cols-2 gap-2">
+                        <div class="grid grid-cols-3 gap-2">
                             <?php 
                             foreach ($lunch_types as $value => $type): 
                                 $is_selected = ($existing_dinner_type === $value) ? 'checked' : '';

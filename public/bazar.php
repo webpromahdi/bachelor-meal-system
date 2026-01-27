@@ -1,9 +1,32 @@
 <?php
+/**
+ * bazar.php - Category-wise Bulk Bazar Entry
+ * 
+ * DESIGN PRINCIPLES:
+ * 1. Category-wise bulk input (not item-wise)
+ * 2. Fixed categories: Chicken, Fish, Dim (Egg), Other, Rice
+ * 3. One date picker, one "Paid By" dropdown
+ * 4. Amount input for EACH category
+ * 5. Friday Special checkbox for special meal handling
+ * 
+ * DATABASE INSERT LOGIC:
+ * - Insert ONE row per category into bazar_items (if amount > 0)
+ * - Categories: chicken, fish, dim, other, friday, rice
+ * - Rice is saved as SEPARATE 'rice' category (cost-only, no meal count)
+ * 
+ * FRIDAY SPECIAL RULES:
+ * - Friday Special is SEPARATE from Other category
+ * - When Friday Special is checked, Other is hidden for that day
+ * - Friday Special cost distributed only among Friday lunch eaters
+ */
+
 require_once '../config/database.php';
 
 // Initialize variables
 $message = '';
 $message_type = '';
+$saved_summary = [];
+$selected_date = $_POST['bazar_date'] ?? date('Y-m-d');
 
 // Fetch persons for dropdown
 $persons = [];
@@ -16,46 +39,193 @@ if ($person_result) {
 }
 
 // Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Get form data
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
     $bazar_date = $_POST['bazar_date'] ?? '';
-    $item_name = $_POST['item_name'] ?? '';
-    $category = $_POST['category'] ?? '';
-    $amount = $_POST['amount'] ?? '';
     $paid_by = $_POST['paid_by'] ?? '';
+    $is_friday_special = isset($_POST['friday_special']) ? true : false;
     
-    // Basic validation
-    if (empty($bazar_date) || empty($item_name) || empty($category) || empty($amount) || empty($paid_by)) {
-        $message = 'Please fill all required fields';
-        $message_type = 'error';
-    } elseif (!is_numeric($amount) || $amount <= 0) {
-        $message = 'Please enter a valid amount';
+    // Get category amounts
+    $chicken_amount = floatval($_POST['chicken_amount'] ?? 0);
+    $fish_amount = floatval($_POST['fish_amount'] ?? 0);
+    $dim_amount = floatval($_POST['dim_amount'] ?? 0);
+    $other_amount = floatval($_POST['other_amount'] ?? 0);
+    $rice_amount = floatval($_POST['rice_amount'] ?? 0);
+    $friday_special_amount = floatval($_POST['friday_special_amount'] ?? 0);
+    
+    // Validation
+    if (empty($bazar_date) || empty($paid_by)) {
+        $message = 'Please select date and who paid';
         $message_type = 'error';
     } else {
-        // Prepare SQL statement with paid_by
-        $sql = "INSERT INTO bazar_items (bazar_date, item_name, category, amount, paid_by) 
-                VALUES (?, ?, ?, ?, ?)";
-        $stmt = $conn->prepare($sql);
+        // Begin transaction
+        $conn->begin_transaction();
         
-        if ($stmt) {
-            // Bind parameters (s=string, d=double, i=integer)
-            $stmt->bind_param("sssdi", $bazar_date, $item_name, $category, $amount, $paid_by);
+        try {
+            // First, delete existing entries for this date and payer (to allow corrections)
+            $delete_sql = "DELETE FROM bazar_items WHERE bazar_date = ? AND paid_by = ?";
+            $delete_stmt = $conn->prepare($delete_sql);
+            $delete_stmt->bind_param("si", $bazar_date, $paid_by);
+            $delete_stmt->execute();
+            $delete_stmt->close();
             
-            // Execute query
-            if ($stmt->execute()) {
-                $message = 'Bazar item added successfully!';
+            // Prepare INSERT statement
+            $insert_sql = "INSERT INTO bazar_items (bazar_date, item_name, category, amount, paid_by) 
+                           VALUES (?, ?, ?, ?, ?)";
+            $insert_stmt = $conn->prepare($insert_sql);
+            
+            if (!$insert_stmt) {
+                throw new Exception('Failed to prepare statement: ' . $conn->error);
+            }
+            
+            $total_inserted = 0;
+            $saved_summary = [];
+            
+            // ============================================
+            // INSERT CHICKEN (if amount > 0)
+            // Category: chicken
+            // ============================================
+            if ($chicken_amount > 0) {
+                $item_name = 'Chicken/Meat';
+                $category = 'chicken';
+                $insert_stmt->bind_param("sssdi", $bazar_date, $item_name, $category, $chicken_amount, $paid_by);
+                if (!$insert_stmt->execute()) {
+                    throw new Exception('Insert failed: ' . $insert_stmt->error);
+                }
+                $saved_summary['Chicken'] = $chicken_amount;
+                $total_inserted++;
+            }
+            
+            // ============================================
+            // INSERT FISH (if amount > 0)
+            // Category: fish
+            // ============================================
+            if ($fish_amount > 0) {
+                $item_name = 'Fish/Seafood';
+                $category = 'fish';
+                $insert_stmt->bind_param("sssdi", $bazar_date, $item_name, $category, $fish_amount, $paid_by);
+                if (!$insert_stmt->execute()) {
+                    throw new Exception('Insert failed: ' . $insert_stmt->error);
+                }
+                $saved_summary['Fish'] = $fish_amount;
+                $total_inserted++;
+            }
+            
+            // ============================================
+            // INSERT DIM/EGG (if amount > 0)
+            // Category: dim
+            // Dim is a FULL meal category (not part of Chicken or Other)
+            // ============================================
+            if ($dim_amount > 0) {
+                $item_name = 'Dim/Egg';
+                $category = 'dim';
+                $insert_stmt->bind_param("sssdi", $bazar_date, $item_name, $category, $dim_amount, $paid_by);
+                if (!$insert_stmt->execute()) {
+                    throw new Exception('Insert failed: ' . $insert_stmt->error);
+                }
+                $saved_summary['Dim (Egg)'] = $dim_amount;
+                $total_inserted++;
+            }
+            
+            // ============================================
+            // INSERT OTHER (if amount > 0)
+            // Category: other
+            // NOTE: When Friday Special is checked, Other is hidden
+            // ============================================
+            if ($other_amount > 0) {
+                $item_name = 'Other/Vegetables';
+                $category = 'other';
+                $insert_stmt->bind_param("sssdi", $bazar_date, $item_name, $category, $other_amount, $paid_by);
+                if (!$insert_stmt->execute()) {
+                    throw new Exception('Insert failed: ' . $insert_stmt->error);
+                }
+                $saved_summary['Other'] = $other_amount;
+                $total_inserted++;
+            }
+            
+            // ============================================
+            // INSERT RICE (if amount > 0)
+            // Category: rice
+            // RICE IS A SEPARATE COST-ONLY CATEGORY (PERSON-WISE)
+            // - Rice has NO meal count
+            // - Rice is NOT distributed by meals
+            // - Rice cost goes ONLY to the payer (paid_by)
+            // - Rice MUST be saved as its own category for proper tracking
+            // ============================================
+            if ($rice_amount > 0) {
+                $item_name = 'Rice (Chal)';
+                $category = 'rice';  // SEPARATE CATEGORY - not merged with 'other'
+                $insert_stmt->bind_param("sssdi", $bazar_date, $item_name, $category, $rice_amount, $paid_by);
+                if (!$insert_stmt->execute()) {
+                    throw new Exception('Insert failed: ' . $insert_stmt->error);
+                }
+                $saved_summary['Rice'] = $rice_amount;
+                $total_inserted++;
+            }
+            
+            // ============================================
+            // INSERT FRIDAY SPECIAL (if checked and amount > 0)
+            // Category: friday
+            // Friday Special is SEPARATE from Other category
+            // Cost distributed only among Friday lunch eaters
+            // ============================================
+            if ($is_friday_special && $friday_special_amount > 0) {
+                $item_name = 'Friday Special Meal';
+                $category = 'friday';
+                $insert_stmt->bind_param("sssdi", $bazar_date, $item_name, $category, $friday_special_amount, $paid_by);
+                if (!$insert_stmt->execute()) {
+                    throw new Exception('Insert failed: ' . $insert_stmt->error);
+                }
+                $saved_summary['Friday Special'] = $friday_special_amount;
+                $total_inserted++;
+            }
+            
+            $insert_stmt->close();
+            
+            // Commit transaction
+            $conn->commit();
+            
+            if ($total_inserted > 0) {
+                $total_amount = array_sum($saved_summary);
+                $message = "✅ Saved {$total_inserted} category entries totaling BDT " . number_format($total_amount, 2);
                 $message_type = 'success';
             } else {
-                $message = 'Error: ' . $stmt->error;
+                $message = '⚠️ No amounts entered. Nothing was saved.';
                 $message_type = 'error';
             }
-            $stmt->close();
-        } else {
-            $message = 'Database error: ' . $conn->error;
+            
+        } catch (Exception $e) {
+            $conn->rollback();
+            $message = '❌ Error: ' . $e->getMessage();
             $message_type = 'error';
         }
     }
 }
+
+// ============================================
+// LOAD EXISTING DATA FOR THE SELECTED DATE
+// ============================================
+$existing_data = [];
+$existing_paid_by = null;
+$load_sql = "SELECT category, SUM(amount) as total_amount, paid_by
+             FROM bazar_items 
+             WHERE bazar_date = ?
+             GROUP BY category, paid_by";
+$load_stmt = $conn->prepare($load_sql);
+$load_stmt->bind_param("s", $selected_date);
+$load_stmt->execute();
+$load_result = $load_stmt->get_result();
+
+while ($row = $load_result->fetch_assoc()) {
+    $existing_data[$row['category']] = $row['total_amount'];
+    if ($existing_paid_by === null) {
+        $existing_paid_by = $row['paid_by'];
+    }
+}
+$load_stmt->close();
+
+// Check if it's a Friday
+$is_friday = (date('N', strtotime($selected_date)) == 5);
+$has_friday_special = isset($existing_data['friday']);
 ?>
 
 <!DOCTYPE html>
@@ -65,169 +235,335 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bazar Entry - Bachelor Meal System</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .category-card {
+            transition: all 0.2s;
+        }
+        .category-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .amount-input {
+            font-size: 1.25rem;
+            font-weight: 600;
+            text-align: right;
+        }
+        .amount-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        .hidden-category {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+    </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-100">
+    <!-- Navigation Bar -->
+    <nav class="bg-blue-600 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <div class="text-2xl font-bold">🛒</div>
+                    <div class="ml-2">
+                        <span class="font-bold text-lg">Bachelor Meal System</span>
+                        <span class="text-sm text-blue-200 block -mt-1">Bazar Entry</span>
+                    </div>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="index.php" class="px-4 py-2 rounded-lg hover:bg-blue-700 transition">📊 Dashboard</a>
+                    <a href="meals.php" class="px-4 py-2 rounded-lg hover:bg-blue-700 transition">🍽️ Meals</a>
+                    <a href="bazar.php" class="px-4 py-2 rounded-lg bg-blue-800">🛒 Bazar</a>
+                    <a href="summary.php" class="px-4 py-2 rounded-lg hover:bg-blue-700 transition">📈 Summary</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
     <div class="max-w-4xl mx-auto p-6">
         <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">Bazar Entry</h1>
-            <p class="text-gray-600">Enter daily bazar (grocery shopping) items</p>
-            <a href="index.php" class="text-blue-600 hover:text-blue-800 text-sm mt-2 inline-block">← Back to Home</a>
+        <div class="mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">🛒 Daily Bazar Entry</h1>
+            <p class="text-gray-600">Enter category-wise bazar amounts (Chicken, Fish, Dim, Other, Rice)</p>
         </div>
 
         <!-- Message Alert -->
         <?php if ($message): ?>
-            <div class="mb-6 p-4 rounded-lg <?php echo $message_type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'; ?>">
-                <?php echo htmlspecialchars($message); ?>
+            <div class="mb-6 p-4 rounded-lg <?php echo $message_type === 'success' ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-red-100 text-red-800 border border-red-300'; ?>">
+                <?php echo $message; ?>
+                
+                <?php if (!empty($saved_summary)): ?>
+                    <div class="mt-3 pt-3 border-t <?php echo $message_type === 'success' ? 'border-green-300' : 'border-red-300'; ?>">
+                        <strong>Saved Amounts:</strong>
+                        <ul class="mt-1">
+                            <?php foreach ($saved_summary as $cat => $amt): ?>
+                                <li>• <?php echo $cat; ?>: BDT <?php echo number_format($amt, 2); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <div class="mt-2 font-bold">
+                            Total: BDT <?php echo number_format(array_sum($saved_summary), 2); ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
 
-        <!-- Bazar Entry Form -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <form method="POST" class="space-y-6">
-                <!-- Bazar Date -->
-                <div>
-                    <label for="bazar_date" class="block text-sm font-medium text-gray-700 mb-2">
-                        Bazar Date *
-                    </label>
-                    <input type="date" 
-                           id="bazar_date" 
-                           name="bazar_date" 
-                           value="<?php echo date('Y-m-d'); ?>"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           required>
+        <!-- Main Form -->
+        <form method="POST" id="bazarForm">
+            
+            <!-- Date & Paid By Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Date Picker -->
+                    <div>
+                        <label for="bazar_date" class="block text-sm font-medium text-gray-700 mb-2">
+                            📅 Bazar Date *
+                        </label>
+                        <input type="date" 
+                               id="bazar_date" 
+                               name="bazar_date" 
+                               value="<?php echo htmlspecialchars($selected_date); ?>"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
+                               onchange="this.form.submit()"
+                               required>
+                        <p class="text-sm text-gray-500 mt-1">
+                            <?php echo date('l', strtotime($selected_date)); ?>
+                            <?php if ($is_friday): ?>
+                                <span class="text-purple-600 font-medium">(Friday - Special Meal Day!)</span>
+                            <?php endif; ?>
+                        </p>
+                    </div>
+                    
+                    <!-- Paid By Dropdown -->
+                    <div>
+                        <label for="paid_by" class="block text-sm font-medium text-gray-700 mb-2">
+                            💰 Paid By *
+                        </label>
+                        <select id="paid_by" 
+                                name="paid_by" 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
+                                required>
+                            <option value="">-- Select Person --</option>
+                            <?php foreach ($persons as $person): ?>
+                                <option value="<?php echo $person['id']; ?>"
+                                    <?php echo ($existing_paid_by == $person['id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($person['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
+            </div>
 
-                <!-- Item Name -->
-                <div>
-                    <label for="item_name" class="block text-sm font-medium text-gray-700 mb-2">
-                        Item Name *
-                    </label>
-                    <input type="text" 
-                           id="item_name" 
-                           name="item_name" 
-                           placeholder="e.g., Chicken, Fish, Rice, Oil, Vegetables"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           required>
-                </div>
-
-                <!-- Category -->
-                <div>
-                    <label for="category" class="block text-sm font-medium text-gray-700 mb-2">
-                        Category *
-                    </label>
-                    <select id="category" 
-                            name="category" 
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            required>
-                        <option value="">Select category</option>
-                        <option value="fish">Fish</option>
-                        <option value="chicken">Chicken</option>
-                        <option value="other">Other</option>
-                        <option value="friday">Friday Special</option>
-                    </select>
-                    <p class="text-sm text-gray-500 mt-1">Category determines which meal category this item belongs to</p>
-                </div>
-
-                <!-- Amount -->
-                <div>
-                    <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">
-                        Amount (BDT) *
+            <!-- Friday Special Checkbox -->
+            <div class="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 mb-6">
+                <label class="flex items-center cursor-pointer">
+                    <input type="checkbox" 
+                           id="friday_special" 
+                           name="friday_special" 
+                           class="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                           <?php echo $has_friday_special ? 'checked' : ''; ?>
+                           onchange="toggleFridaySpecial()">
+                    <span class="ml-3 text-lg font-medium text-purple-800">
+                        🍛 Friday Special Meal (Lunch Only)
+                    </span>
+                </label>
+                <p class="text-purple-600 text-sm mt-1 ml-8">
+                    Check this if today has a special Friday meal. Cost will be distributed only among those who ate Friday lunch.
+                    <br><strong>Note:</strong> Friday Special is ADDITIONAL - you can still enter Other category items.
+                </p>
+                
+                <!-- Friday Special Amount (shown when checked) -->
+                <div id="friday_special_section" class="mt-4 ml-8 <?php echo $has_friday_special ? '' : 'hidden'; ?>">
+                    <label class="block text-sm font-medium text-purple-700 mb-2">
+                        Friday Special Total Cost (BDT) *
                     </label>
                     <input type="number" 
-                           id="amount" 
-                           name="amount" 
-                           step="0.01"
-                           min="0.01"
+                           name="friday_special_amount" 
+                           id="friday_special_amount"
+                           value="<?php echo $existing_data['friday'] ?? ''; ?>"
+                           step="0.01" 
+                           min="0"
                            placeholder="0.00"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           required>
-                    <p class="text-sm text-gray-500 mt-1">Enter the cost of this item</p>
+                           class="w-full md:w-64 px-4 py-3 border-2 border-purple-300 rounded-lg amount-input bg-white text-purple-800">
                 </div>
+            </div>
 
-                <!-- Paid By -->
-                <div>
-                    <label for="paid_by" class="block text-sm font-medium text-gray-700 mb-2">
-                        Paid By *
-                    </label>
-                    <select id="paid_by" 
-                            name="paid_by" 
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            required>
-                        <option value="">Select who paid</option>
-                        <?php foreach ($persons as $person): ?>
-                            <option value="<?php echo $person['id']; ?>">
-                                <?php echo htmlspecialchars($person['name']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <p class="text-sm text-gray-500 mt-1">Select the person who paid for this bazar item</p>
+            <!-- Category Amount Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                
+                <!-- Chicken Card -->
+                <div class="category-card bg-red-50 border-2 border-red-200 rounded-lg p-5">
+                    <div class="flex items-center mb-3">
+                        <span class="text-3xl mr-3">🍗</span>
+                        <h3 class="text-lg font-bold text-red-800">Chicken / Meat</h3>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-red-600 mr-2">BDT</span>
+                        <input type="number" 
+                               name="chicken_amount" 
+                               value="<?php echo $existing_data['chicken'] ?? ''; ?>"
+                               step="0.01" 
+                               min="0"
+                               placeholder="0.00"
+                               class="flex-1 px-4 py-3 border-2 border-red-300 rounded-lg amount-input bg-white text-red-800">
+                    </div>
                 </div>
+                
+                <!-- Fish Card -->
+                <div class="category-card bg-blue-50 border-2 border-blue-200 rounded-lg p-5">
+                    <div class="flex items-center mb-3">
+                        <span class="text-3xl mr-3">🐟</span>
+                        <h3 class="text-lg font-bold text-blue-800">Fish / Seafood</h3>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-blue-600 mr-2">BDT</span>
+                        <input type="number" 
+                               name="fish_amount" 
+                               value="<?php echo $existing_data['fish'] ?? ''; ?>"
+                               step="0.01" 
+                               min="0"
+                               placeholder="0.00"
+                               class="flex-1 px-4 py-3 border-2 border-blue-300 rounded-lg amount-input bg-white text-blue-800">
+                    </div>
+                </div>
+                
+                <!-- Dim (Egg) Card - FULL MEAL CATEGORY -->
+                <div class="category-card bg-yellow-50 border-2 border-yellow-200 rounded-lg p-5">
+                    <div class="flex items-center mb-3">
+                        <span class="text-3xl mr-3">🥚</span>
+                        <h3 class="text-lg font-bold text-yellow-800">Dim (Egg)</h3>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-yellow-600 mr-2">BDT</span>
+                        <input type="number" 
+                               name="dim_amount" 
+                               value="<?php echo $existing_data['dim'] ?? ''; ?>"
+                               step="0.01" 
+                               min="0"
+                               placeholder="0.00"
+                               class="flex-1 px-4 py-3 border-2 border-yellow-300 rounded-lg amount-input bg-white text-yellow-800">
+                    </div>
+                    <p class="text-yellow-600 text-xs mt-2">Full meal category (not part of Other)</p>
+                </div>
+                
+                <!-- Other/Vegetables Card - ALWAYS VISIBLE (meal-based category) -->
+                <div id="other_card" class="category-card bg-green-50 border-2 border-green-200 rounded-lg p-5">
+                    <div class="flex items-center mb-3">
+                        <span class="text-3xl mr-3">🥗</span>
+                        <h3 class="text-lg font-bold text-green-800">Other / Vegetables</h3>
+                        <span class="ml-2 px-2 py-1 bg-green-200 text-green-800 text-xs font-bold rounded">Meal-based</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-green-600 mr-2">BDT</span>
+                        <input type="number" 
+                               name="other_amount" 
+                               id="other_amount"
+                               value="<?php echo $existing_data['other'] ?? ''; ?>"
+                               step="0.01" 
+                               min="0"
+                               placeholder="0.00"
+                               class="flex-1 px-4 py-3 border-2 border-green-300 rounded-lg amount-input bg-white text-green-800">
+                    </div>
+                    <p class="text-green-600 text-xs mt-2">Spices, oil, vegetables - shared by all meals</p>
+                </div>
+                
+                <!-- Rice Card - PERSON-WISE INVESTMENT (NOT merged with Other) -->
+                <div class="category-card bg-amber-50 border-2 border-amber-200 rounded-lg p-5">
+                    <div class="flex items-center mb-3">
+                        <span class="text-3xl mr-3">🍚</span>
+                        <h3 class="text-lg font-bold text-amber-800">Rice (Chal)</h3>
+                        <span class="ml-2 px-2 py-1 bg-amber-200 text-amber-800 text-xs font-bold rounded">Person-wise</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-amber-600 mr-2">BDT</span>
+                        <input type="number" 
+                               name="rice_amount" 
+                               value="<?php echo $existing_data['rice'] ?? ''; ?>"
+                               step="0.01" 
+                               min="0"
+                               placeholder="0.00"
+                               class="flex-1 px-4 py-3 border-2 border-amber-300 rounded-lg amount-input bg-white text-amber-800">
+                    </div>
+                    <p class="text-amber-600 text-xs mt-2">⚠️ Rice cost goes ONLY to the payer (not shared by meals)</p>
+                </div>
+                
+            </div>
 
-                <!-- Submit Button -->
-                <div class="pt-4">
-                    <button type="submit" 
-                            class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-                        Add Bazar Item
-                    </button>
-                </div>
-            </form>
+            <!-- Submit Button -->
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <button type="submit" 
+                        name="submit_bazar"
+                        class="w-full bg-green-600 text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex items-center justify-center transition">
+                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Save Bazar Entry for <?php echo date('d M Y', strtotime($selected_date)); ?>
+                </button>
+            </div>
+        </form>
+
+        <!-- Help Section -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 class="font-bold text-blue-800 mb-2">💡 Category Guide</h3>
+            <ul class="text-blue-700 text-sm space-y-1">
+                <li>• <strong>Chicken/Fish/Dim</strong> - Meal categories, cost shared by meal count</li>
+                <li>• <strong>Other (Vegetables/Oil/Spices)</strong> - <span class="font-bold text-green-700">Meal-based</span>, cost shared by ALL meals</li>
+                <li>• <strong>Rice (Chal)</strong> - <span class="font-bold text-amber-700">PERSON-WISE</span>, cost goes ONLY to the payer</li>
+                <li>• <strong>Friday Special</strong> - Distributed only among Friday lunch eaters</li>
+                <li>• Leave amount as 0 or empty if nothing was purchased</li>
+                <li>• Re-submitting for same date/person will update existing entries</li>
+            </ul>
+            <div class="mt-2 pt-2 border-t border-blue-200 text-xs text-blue-600">
+                <strong>Important:</strong> Other and Rice are SEPARATE categories - enter them independently!
+            </div>
         </div>
 
-        <!-- Category Guide -->
-        <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Fish Category -->
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 class="font-medium text-blue-800 mb-2">Fish Category</h3>
-                <ul class="text-blue-700 text-sm space-y-1">
-                    <li>• All types of fish</li>
-                    <li>• Shrimp, prawn</li>
-                    <li>• Other seafood</li>
+        <!-- Existing Entries for Today -->
+        <?php if (!empty($existing_data)): ?>
+            <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h3 class="font-bold text-yellow-800 mb-2">📋 Existing Entries for <?php echo date('d M Y', strtotime($selected_date)); ?></h3>
+                <ul class="text-yellow-700 text-sm space-y-1">
+                    <?php 
+                    $existing_total = 0;
+                    foreach ($existing_data as $cat => $amount): 
+                        $existing_total += $amount;
+                    ?>
+                        <li>• <strong><?php echo ucfirst($cat); ?>:</strong> BDT <?php echo number_format($amount, 2); ?></li>
+                    <?php endforeach; ?>
                 </ul>
+                <div class="mt-2 pt-2 border-t border-yellow-300 font-bold text-yellow-800">
+                    Total: BDT <?php echo number_format($existing_total, 2); ?>
+                </div>
+                <p class="text-yellow-600 text-xs mt-2">⚠️ Saving new amounts will replace these entries</p>
             </div>
-
-            <!-- Chicken Category -->
-            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                <h3 class="font-medium text-red-800 mb-2">Chicken Category</h3>
-                <ul class="text-red-700 text-sm space-y-1">
-                    <li>• Chicken meat</li>
-                    <li>• Mutton, beef</li>
-                    <li>• Other meat items</li>
-                </ul>
-            </div>
-
-            <!-- Other Category -->
-            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <h3 class="font-medium text-gray-800 mb-2">Other Category</h3>
-                <ul class="text-gray-700 text-sm space-y-1">
-                    <li>• Rice, flour</li>
-                    <li>• Vegetables</li>
-                    <li>• Oil, spices</li>
-                    <li>• All non-protein items</li>
-                </ul>
-            </div>
-
-            <!-- Friday Special -->
-            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <h3 class="font-medium text-purple-800 mb-2">Friday Special</h3>
-                <ul class="text-purple-700 text-sm space-y-1">
-                    <li>• Special Friday items</li>
-                    <li>• Biriyani ingredients</li>
-                    <li>• Party/celebration items</li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- Important Note -->
-        <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h3 class="font-medium text-yellow-800 mb-2">Important Note</h3>
-            <p class="text-yellow-700 text-sm">
-                Each bazar item is assigned to one category. The system will automatically 
-                calculate category-wise costs later. Make sure to categorize items correctly 
-                for accurate calculation.
-            </p>
-        </div>
+        <?php endif; ?>
     </div>
+
+    <!-- JavaScript for Friday Special Toggle -->
+    <script>
+        function toggleFridaySpecial() {
+            const checkbox = document.getElementById('friday_special');
+            const section = document.getElementById('friday_special_section');
+            
+            if (checkbox.checked) {
+                // Show Friday Special input
+                section.classList.remove('hidden');
+            } else {
+                // Hide Friday Special input
+                section.classList.add('hidden');
+                document.getElementById('friday_special_amount').value = '';
+            }
+            // NOTE: Other category is ALWAYS visible
+            // Other and Friday Special are NOT mutually exclusive
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleFridaySpecial();
+        });
+    </script>
 </body>
 </html>
 <?php $conn->close(); ?>
