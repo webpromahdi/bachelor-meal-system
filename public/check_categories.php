@@ -1,7 +1,5 @@
 <?php
-/**
- * Quick script to check bazar_items categories
- */
+// Debug script: Check bazar_items categories
 require_once '../config/database.php';
 
 echo "<pre>\n";

@@ -1,29 +1,11 @@
 <?php
 /**
- * summary.php - Monthly Summary with Excel-Style Tabs
+ * summary.php - Monthly Summary
  * 
- * DESIGN PRINCIPLES:
- * 1. 4 tabs matching Excel sheets: Daily Log, Monthly Summary, Cost Distribution, Balance Sheet
- * 2. Guest columns COMPLETELY REMOVED
- * 3. Special Meal handling - distributed only among Special meal eaters
- * 
- * CATEGORY CLASSIFICATION:
- * ============================================
- * MEAL CATEGORIES (have meal counts, shared by meals):
- *   - Chicken: Has meals, has cost, included in total meals
- *   - Fish: Has meals, has cost, included in total meals
- *   - Dim (Egg): FULL MEAL CATEGORY - has meals, has cost, included in total meals
- *   - Other/Veg: Has meals, has cost, included in total meals
- *   - Special: Has meals, has cost, distributed among Special meal eaters
- * 
- * PERSON-WISE INVESTMENT CATEGORIES (NOT shared, NOT a meal):
- *   - Rice (Chal): PERSON-WISE COST - added ONLY to the payer's total cost
- * ============================================
- * 
- * PERSON TOTAL COST FORMULA:
- *   Person Total Cost =
- *       Meal-Based Cost (Chicken + Fish + Dim + Other + Special distributed by meals)
- *     + Rice Cost Paid By That Person (DIRECT PERSON-WISE cost)
+ * Business Rules:
+ * - Meal categories (shared by meals): Chicken, Fish, Dim, Other, Special
+ * - Rice: Person-wise cost (added ONLY to the payer's total)
+ * - Special: Distributed only among Special meal eaters
  */
 
 require_once '../config/database.php';
@@ -33,9 +15,6 @@ $selected_month = $_GET['month'] ?? date('Y-m');
 $month_start = $selected_month . '-01';
 $month_end = date('Y-m-t', strtotime($month_start));
 
-// ============================================
-// FETCH ALL PERSONS
-// ============================================
 $persons = [];
 $person_result = $conn->query("SELECT id, name FROM persons ORDER BY name");
 if ($person_result) {
@@ -45,9 +24,6 @@ if ($person_result) {
     $person_result->free();
 }
 
-// ============================================
-// FETCH DAILY MEALS DATA
-// ============================================
 $daily_meals_sql = "
     SELECT 
         dm.meal_date,
@@ -70,9 +46,6 @@ while ($row = $daily_meals_result->fetch_assoc()) {
 }
 $stmt->close();
 
-// ============================================
-// FETCH BAZAR DATA BY CATEGORY (FOR DAILY MEAL LOG)
-// ============================================
 $bazar_sql = "
     SELECT 
         bazar_date,
@@ -107,9 +80,6 @@ while ($row = $bazar_result->fetch_assoc()) {
 }
 $stmt->close();
 
-// ============================================
-// MONTHLY CATEGORY TOTALS
-// ============================================
 $category_totals_sql = "
     SELECT 
         category,
@@ -137,9 +107,7 @@ while ($row = $cat_result->fetch_assoc()) {
 }
 $stmt->close();
 
-// ============================================
-// RICE COST BY PERSON (PERSON-WISE INVESTMENT)
-// ============================================
+// Rice cost by person (person-wise investment)
 $rice_by_person_sql = "
     SELECT 
         paid_by,
@@ -163,21 +131,13 @@ while ($row = $rice_result->fetch_assoc()) {
 }
 $stmt->close();
 
-// ============================================
-// TOTAL BAZAR CALCULATION
-// ============================================
 $total_bazar = array_sum($category_totals);
 
-// ============================================
-// MEAL-BASED BAZAR (excludes rice for meal rate calculation)
-// ============================================
+// Meal-based bazar excludes rice
 $meal_based_bazar = $category_totals['chicken'] + $category_totals['fish'] 
                   + $category_totals['dim'] + $category_totals['other'] 
                   + $category_totals['special'];
 
-// ============================================
-// PERSON-WISE MEAL COUNTS BY TYPE
-// ============================================
 $person_meals_sql = "
     SELECT 
         person_id,
@@ -240,9 +200,6 @@ while ($row = $person_meals_result->fetch_assoc()) {
 }
 $stmt->close();
 
-// ============================================
-// COUNT SPECIAL MEAL EATERS
-// ============================================
 $special_meals_sql = "
     SELECT person_id, COUNT(*) as special_count
     FROM daily_meals
@@ -266,9 +223,6 @@ while ($row = $special_result->fetch_assoc()) {
 }
 $stmt->close();
 
-// ============================================
-// CALCULATE CATEGORY-WISE MEAL TOTALS
-// ============================================
 $meal_totals_sql = "
     SELECT 
         session,
@@ -298,9 +252,6 @@ while ($row = $meal_totals_result->fetch_assoc()) {
 }
 $stmt->close();
 
-// ============================================
-// CALCULATE MEAL RATES PER CATEGORY
-// ============================================
 $chicken_meals = $meal_totals['lunch_chicken'] + $meal_totals['dinner_chicken'];
 $fish_meals = $meal_totals['lunch_fish'] + $meal_totals['dinner_fish'];
 $dim_meals = $meal_totals['lunch_dim'] + $meal_totals['dinner_dim'];
@@ -310,25 +261,19 @@ $special_meals = $meal_totals['lunch_special'] + $meal_totals['dinner_special'];
 // All regular meals (chicken + fish + dim + other) - excluding special
 $all_regular_meals = $chicken_meals + $fish_meals + $dim_meals + $other_meals;
 
-// ============================================
-// CATEGORY RATES CALCULATION
-// ============================================
+// Category rates
 $chicken_rate = ($chicken_meals > 0) ? $category_totals['chicken'] / $chicken_meals : 0;
 $fish_rate = ($fish_meals > 0) ? $category_totals['fish'] / $fish_meals : 0;
 $dim_rate = ($dim_meals > 0) ? $category_totals['dim'] / $dim_meals : 0;
 $other_rate = ($all_regular_meals > 0) ? $category_totals['other'] / $all_regular_meals : 0;
 $special_rate = ($total_special_meals > 0) ? $category_totals['special'] / $total_special_meals : 0;
 
-// ============================================
-// OVERALL MEAL RATE CALCULATION
-// ============================================
+// Overall meal rate
 $total_monthly_meals = $all_regular_meals + $total_special_meals;
 $total_meal_based_cost = $meal_based_bazar;
 $overall_rate = ($total_monthly_meals > 0) ? $total_meal_based_cost / $total_monthly_meals : 0;
 
-// ============================================
-// CALCULATE COST DISTRIBUTION PER PERSON
-// ============================================
+// Cost distribution per person
 $cost_distribution = [];
 foreach ($person_meals as $pid => $data) {
     $person_chicken = $data['lunch_chicken'] + $data['dinner_chicken'];
@@ -364,9 +309,6 @@ foreach ($person_meals as $pid => $data) {
     ];
 }
 
-// ============================================
-// FETCH PAYMENTS
-// ============================================
 $payments_sql = "
     SELECT 
         paid_by,
@@ -389,9 +331,7 @@ while ($row = $payments_result->fetch_assoc()) {
 }
 $stmt->close();
 
-// ============================================
-// CALCULATE BALANCE SHEET
-// ============================================
+// Balance sheet
 $balance_sheet = [];
 foreach ($cost_distribution as $pid => $data) {
     $paid = $payments[$pid] ?? 0;
@@ -407,9 +347,7 @@ foreach ($cost_distribution as $pid => $data) {
     ];
 }
 
-// ============================================
-// FETCH MEAL MATRIX DATA
-// ============================================
+// Meal matrix data
 $meal_matrix_sql = "
     SELECT 
         meal_date,
@@ -448,9 +386,6 @@ while ($row = $matrix_result->fetch_assoc()) {
 }
 $stmt->close();
 
-// ============================================
-// MEAL TYPE SHORT CODES FOR MATRIX DISPLAY
-// ============================================
 $meal_type_codes = [
     'chicken' => ['code' => 'C', 'color' => 'text-red-600', 'bg' => 'bg-red-50'],
     'fish' => ['code' => 'F', 'color' => 'text-blue-600', 'bg' => 'bg-blue-50'],
@@ -459,9 +394,6 @@ $meal_type_codes = [
     'special' => ['code' => 'S', 'color' => 'text-pink-600', 'bg' => 'bg-pink-50']
 ];
 
-// ============================================
-// PERSON COLORS FOR MATRIX HEADERS
-// ============================================
 $person_colors = [
     ['bg' => 'bg-orange-400', 'text' => 'text-white'],
     ['bg' => 'bg-green-400', 'text' => 'text-white'],
@@ -625,9 +557,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
             </a>
         </div>
 
-        <!-- ============================================ -->
-        <!-- TAB 1: DAILY MEAL LOG -->
-        <!-- ============================================ -->
+        <!-- Daily Meal Log Tab -->
         <?php if ($active_tab === 'daily'): ?>
             <div class="bg-white rounded-lg shadow-md overflow-x-auto">
                 <table class="excel-table">
@@ -743,9 +673,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
             </div>
         <?php endif; ?>
 
-        <!-- ============================================ -->
-        <!-- TAB: MONTHLY MEAL MATRIX -->
-        <!-- ============================================ -->
+        <!-- Monthly Meal Matrix Tab -->
         <?php if ($active_tab === 'matrix'): ?>
             <div class="bg-white rounded-lg shadow-md overflow-x-auto">
                 <div class="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
@@ -859,9 +787,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
             </div>
         <?php endif; ?>
 
-        <!-- ============================================ -->
-        <!-- TAB 2: MONTHLY SUMMARY -->
-        <!-- ============================================ -->
+        <!-- Monthly Summary Tab -->
         <?php if ($active_tab === 'summary'): ?>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Category Summary -->
@@ -992,9 +918,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
             </div>
         <?php endif; ?>
 
-        <!-- ============================================ -->
-        <!-- TAB 3: COST DISTRIBUTION -->
-        <!-- ============================================ -->
+        <!-- Cost Distribution Tab -->
         <?php if ($active_tab === 'cost'): ?>
             <div class="bg-white rounded-lg shadow-md overflow-x-auto">
                 <table class="excel-table">
@@ -1086,9 +1010,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
             </div>
         <?php endif; ?>
 
-        <!-- ============================================ -->
-        <!-- TAB 4: BALANCE SHEET -->
-        <!-- ============================================ -->
+        <!-- Balance Sheet Tab -->
         <?php if ($active_tab === 'balance'): ?>
             <div class="bg-white rounded-lg shadow-md overflow-x-auto">
                 <table class="excel-table">

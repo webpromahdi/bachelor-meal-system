@@ -1,15 +1,12 @@
--- Create database if not exists
 CREATE DATABASE IF NOT EXISTS bachelor_meal_system;
 USE bachelor_meal_system;
 
--- Table: persons
 CREATE TABLE IF NOT EXISTS persons (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Table: daily_meals
--- meal_type includes: chicken, fish, dim (egg), other (veg), special
+-- meal_type: chicken, fish, dim (egg), other (veg), special
 CREATE TABLE IF NOT EXISTS daily_meals (
     id INT AUTO_INCREMENT PRIMARY KEY,
     meal_date DATE NOT NULL,
@@ -20,8 +17,7 @@ CREATE TABLE IF NOT EXISTS daily_meals (
     FOREIGN KEY (person_id) REFERENCES persons(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Table: bazar_items
--- category includes: chicken, fish, dim (egg), other, rice (person-wise), special
+-- category: chicken, fish, dim, other, special (meal-based) | rice (person-wise cost only)
 CREATE TABLE IF NOT EXISTS bazar_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     bazar_date DATE NOT NULL,
@@ -31,14 +27,3 @@ CREATE TABLE IF NOT EXISTS bazar_items (
     paid_by INT,
     FOREIGN KEY (paid_by) REFERENCES persons(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- ============================================
--- MIGRATION: Run these ALTER statements on existing database
--- to add 'dim' and 'rice' without losing data
--- ============================================
-
--- Add 'dim' to daily_meals.meal_type ENUM
--- ALTER TABLE daily_meals MODIFY COLUMN meal_type ENUM('chicken', 'fish', 'dim', 'other', 'special') NOT NULL;
-
--- Add 'dim' and 'rice' to bazar_items.category ENUM
--- ALTER TABLE bazar_items MODIFY COLUMN category ENUM('chicken', 'fish', 'dim', 'other', 'rice', 'special') NOT NULL;

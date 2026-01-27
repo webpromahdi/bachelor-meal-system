@@ -1,22 +1,11 @@
 <?php
 /**
- * meals.php - Simplified Excel-Style Daily Meal Entry
+ * meals.php - Daily Meal Entry
  * 
- * KEY DESIGN PRINCIPLES:
- * 1. Meal Type is GLOBAL (same for everyone per session)
- *    - One Lunch Type for all
- *    - One Dinner Type for all
- * 
- * 2. Guest concept is COMPLETELY REMOVED
- *    - No guest input, no guest column, no guest logic
- *    - Extra guest = admin increases meal count for that person
- * 
- * 3. Per person, ONLY meal COUNT varies
- * 
- * DATABASE INSERT LOGIC:
- * - If Person A has Lunch Count = 2 and Global Lunch Type = Fish
- *   → Insert 2 rows: (date, person_a, lunch, fish, 0)
- * - guest_count is always 0 (column exists but unused)
+ * Business Rules:
+ * - Meal type is GLOBAL per session (same for everyone)
+ * - Only meal count varies per person
+ * - guest_count column unused (guests = increased meal count)
  */
 
 require_once '../config/database.php';
@@ -72,14 +61,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_meals'])) {
         try {
             $total_rows_inserted = 0;
             
-            // Prepare DELETE statement (to remove existing entries before re-inserting)
-            // This prevents duplicates and allows corrections
+            // Delete existing entries before re-inserting (allows corrections)
             $delete_sql = "DELETE FROM daily_meals 
                            WHERE meal_date = ? AND person_id = ? AND session = ?";
             $delete_stmt = $conn->prepare($delete_sql);
             
-            // Prepare INSERT statement
-            // guest_count is always 0 - we don't use guests anymore
+            // guest_count always 0 (guests tracked via increased meal count)
             $insert_sql = "INSERT INTO daily_meals (meal_date, person_id, session, meal_type, guest_count) 
                            VALUES (?, ?, ?, ?, 0)";
             $insert_stmt = $conn->prepare($insert_sql);
@@ -88,20 +75,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_meals'])) {
                 throw new Exception('Failed to prepare statements: ' . $conn->error);
             }
             
-            // Loop through each person's data
+            // Loop through each person
             foreach ($persons as $person) {
                 $person_id = $person['id'];
                 
-                // Get meal counts for this person
                 $lunch_count = intval($_POST['lunch_count'][$person_id] ?? 0);
                 $dinner_count = intval($_POST['dinner_count'][$person_id] ?? 0);
                 
-                // ============================================
-                // PROCESS LUNCH MEALS
-                // ============================================
+                // Process lunch
                 $session_lunch = 'lunch';
                 
-                // Always delete existing lunch entries first (allows corrections)
                 $delete_stmt->bind_param("sis", $selected_date, $person_id, $session_lunch);
                 $delete_stmt->execute();
                 
@@ -116,12 +99,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_meals'])) {
                     }
                 }
                 
-                // ============================================
-                // PROCESS DINNER MEALS
-                // ============================================
+                // Process dinner
                 $session_dinner = 'dinner';
                 
-                // Always delete existing dinner entries first
                 $delete_stmt->bind_param("sis", $selected_date, $person_id, $session_dinner);
                 $delete_stmt->execute();
                 
@@ -137,19 +117,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_meals'])) {
                 }
             }
             
-            // Close statements
             $delete_stmt->close();
             $insert_stmt->close();
             
-            // Commit transaction
             $conn->commit();
             
-            // Success message
             $message = "✅ Successfully saved {$total_rows_inserted} meal entries for " . date('d M Y', strtotime($selected_date)) . "!";
             $message_type = 'success';
             
         } catch (Exception $e) {
-            // Rollback on any error
             $conn->rollback();
             $message = '❌ Error: ' . $e->getMessage();
             $message_type = 'error';
@@ -157,9 +133,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_meals'])) {
     }
 }
 
-// ============================================
-// LOAD EXISTING DATA FOR THE SELECTED DATE
-// ============================================
 $existing_data = [];
 $existing_lunch_type = '';
 $existing_dinner_type = '';
@@ -301,9 +274,7 @@ $load_stmt->close();
         <!-- Main Form -->
         <form method="POST">
             
-            <!-- ============================================ -->
-            <!-- SECTION 1: DATE PICKER -->
-            <!-- ============================================ -->
+            <!-- Date Picker -->
             <div class="bg-white rounded-lg shadow-md p-4 mb-6">
                 <div class="flex flex-wrap items-center gap-4">
                     <div class="flex items-center space-x-3">
@@ -327,9 +298,7 @@ $load_stmt->close();
                 </div>
             </div>
 
-            <!-- ============================================ -->
-            <!-- SECTION 2: GLOBAL MEAL TYPES (Same for everyone) -->
-            <!-- ============================================ -->
+            <!-- Global Meal Types (Same for Everyone) -->
             <div class="bg-gradient-to-r from-amber-50 to-indigo-50 rounded-lg shadow-md p-6 mb-6 border border-gray-200">
                 <h2 class="text-lg font-bold text-gray-800 mb-4">🍽️ Today's Meal Types (Same for Everyone)</h2>
                 
@@ -397,9 +366,7 @@ $load_stmt->close();
                 </div>
             </div>
 
-            <!-- ============================================ -->
-            <!-- SECTION 3: PERSON-WISE MEAL COUNTS TABLE -->
-            <!-- ============================================ -->
+            <!-- Person-wise Meal Counts Table -->
             <div class="bg-white rounded-lg shadow-md overflow-hidden">
                 <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
                     <h2 class="text-lg font-bold text-gray-800">📋 Meal Counts Per Person</h2>
@@ -527,9 +494,6 @@ $load_stmt->close();
 
     <!-- JavaScript for Live Totals & Quick Actions -->
     <script>
-        /**
-         * Calculate and display totals in real-time
-         */
         function updateTotals() {
             let lunchTotal = 0;
             let dinnerTotal = 0;
@@ -546,11 +510,6 @@ $load_stmt->close();
             document.getElementById('total-dinner').textContent = dinnerTotal;
         }
 
-        /**
-         * Set all meal counts to specified values
-         * @param {number} lunch - lunch count for everyone
-         * @param {number} dinner - dinner count for everyone
-         */
         function setAllCounts(lunch, dinner) {
             document.querySelectorAll('input[name^="lunch_count"]').forEach(input => {
                 input.value = lunch;
@@ -566,7 +525,6 @@ $load_stmt->close();
             document.querySelectorAll('.excel-input').forEach(input => {
                 input.addEventListener('input', updateTotals);
             });
-            // Initial calculation
             updateTotals();
         });
     </script>

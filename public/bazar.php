@@ -1,22 +1,10 @@
 <?php
 /**
- * bazar.php - Category-wise Bulk Bazar Entry
+ * bazar.php - Category-wise Bazar Entry
  * 
- * DESIGN PRINCIPLES:
- * 1. Category-wise bulk input (not item-wise)
- * 2. Fixed categories: Chicken, Fish, Dim (Egg), Other, Special, Rice
- * 3. One date picker, one "Paid By" dropdown
- * 4. Amount input for EACH category
- * 
- * DATABASE INSERT LOGIC:
- * - Insert ONE row per category into bazar_items (if amount > 0)
- * - Categories: chicken, fish, dim, other, special, rice
- * - Rice is saved as SEPARATE 'rice' category (cost-only, no meal count)
- * 
- * SPECIAL MEAL RULES:
- * - Special Meal is a regular category like Chicken/Fish
- * - Special Meal cost distributed among those who ate Special meals
- * - Special Meal is independent, no dependency on Chicken/Fish
+ * Business Rules:
+ * - Rice: Person-wise cost (not shared by meals)
+ * - Special: Distributed among Special meal eaters only
  */
 
 require_once '../config/database.php';
@@ -78,10 +66,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
             $total_inserted = 0;
             $saved_summary = [];
             
-            // ============================================
-            // INSERT CHICKEN (if amount > 0)
-            // Category: chicken
-            // ============================================
             if ($chicken_amount > 0) {
                 $item_name = 'Chicken/Meat';
                 $category = 'chicken';
@@ -93,10 +77,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
                 $total_inserted++;
             }
             
-            // ============================================
-            // INSERT FISH (if amount > 0)
-            // Category: fish
-            // ============================================
             if ($fish_amount > 0) {
                 $item_name = 'Fish/Seafood';
                 $category = 'fish';
@@ -108,10 +88,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
                 $total_inserted++;
             }
             
-            // ============================================
-            // INSERT DIM/EGG (if amount > 0)
-            // Category: dim
-            // ============================================
             if ($dim_amount > 0) {
                 $item_name = 'Dim/Egg';
                 $category = 'dim';
@@ -123,10 +99,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
                 $total_inserted++;
             }
             
-            // ============================================
-            // INSERT OTHER (if amount > 0)
-            // Category: other
-            // ============================================
             if ($other_amount > 0) {
                 $item_name = 'Other/Vegetables';
                 $category = 'other';
@@ -138,12 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
                 $total_inserted++;
             }
             
-            // ============================================
-            // INSERT SPECIAL MEAL (if amount > 0)
-            // Category: special
-            // Special Meal is a regular category like Chicken/Fish
-            // Cost distributed among Special meal eaters
-            // ============================================
+            // Business rule: Special cost distributed among Special meal eaters only
             if ($special_amount > 0) {
                 $item_name = 'Special Meal';
                 $category = 'special';
@@ -155,11 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
                 $total_inserted++;
             }
             
-            // ============================================
-            // INSERT RICE (if amount > 0)
-            // Category: rice
-            // RICE IS A SEPARATE COST-ONLY CATEGORY (PERSON-WISE)
-            // ============================================
+            // Business rule: Rice cost goes ONLY to the payer (not shared)
             if ($rice_amount > 0) {
                 $item_name = 'Rice (Chal)';
                 $category = 'rice';
@@ -193,9 +156,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
     }
 }
 
-// ============================================
-// LOAD EXISTING DATA FOR THE SELECTED DATE
-// ============================================
 $existing_data = [];
 $existing_paid_by = null;
 $load_sql = "SELECT category, SUM(amount) as total_amount, paid_by
