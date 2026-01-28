@@ -273,6 +273,12 @@ $total_monthly_meals = $all_regular_meals + $total_special_meals;
 $total_meal_based_cost = $meal_based_bazar;
 $overall_rate = ($total_monthly_meals > 0) ? $total_meal_based_cost / $total_monthly_meals : 0;
 
+// Rice meal rate calculation (rice is shared based on total meals eaten)
+// Rice Meal Count = Total Meals (everyone who eats uses rice)
+$total_rice_cost = $category_totals['rice'];
+$total_rice_meals = $total_monthly_meals; // Rice meals = All meals eaten
+$rice_meal_rate = ($total_rice_meals > 0) ? $total_rice_cost / $total_rice_meals : 0;
+
 // Cost distribution per person
 $cost_distribution = [];
 foreach ($person_meals as $pid => $data) {
@@ -282,15 +288,21 @@ foreach ($person_meals as $pid => $data) {
     $person_other = $data['lunch_other'] + $data['dinner_other'];
     $person_regular = $data['total_lunch'] + $data['total_dinner'];
     $person_special = $data['special_meals'];
+    $person_total_meals = $person_regular; // Total meals for this person (includes special in regular count already)
     
     $chicken_cost = $person_chicken * $chicken_rate;
     $fish_cost = $person_fish * $fish_rate;
     $dim_cost = $person_dim * $dim_rate;
     $other_cost = $person_regular * $other_rate;
     $special_cost = $person_special * $special_rate;
-    $rice_cost = $rice_costs[$pid] ?? 0;
     
-    $total_person_cost = $chicken_cost + $fish_cost + $dim_cost + $other_cost + $special_cost + $rice_cost;
+    // Rice cost is calculated based on meals eaten (not rice paid)
+    // Person Rice Cost = Person Total Meals × Rice Meal Rate
+    $rice_cost_calculated = $person_total_meals * $rice_meal_rate;
+    $rice_paid = $rice_costs[$pid] ?? 0; // Investment tracking
+    
+    // Total cost includes calculated rice cost (not rice paid)
+    $total_person_cost = $chicken_cost + $fish_cost + $dim_cost + $other_cost + $special_cost + $rice_cost_calculated;
     
     $cost_distribution[$pid] = [
         'name' => $data['name'],
@@ -301,7 +313,8 @@ foreach ($person_meals as $pid => $data) {
         'dim_meals' => $person_dim,
         'dim_cost' => $dim_cost,
         'other_cost' => $other_cost,
-        'rice_cost' => $rice_cost,
+        'rice_paid' => $rice_paid,           // Amount invested in rice
+        'rice_cost' => $rice_cost_calculated, // Calculated cost based on meals
         'special_meals' => $person_special,
         'special_cost' => $special_cost,
         'total_meals' => $person_regular,
@@ -343,7 +356,8 @@ foreach ($cost_distribution as $pid => $data) {
         'total_paid' => $paid,
         'should_pay' => $should_pay,
         'balance' => $balance,
-        'rice_cost' => $data['rice_cost']
+        'rice_paid' => $data['rice_paid'],  // Investment amount
+        'rice_cost' => $data['rice_cost']   // Calculated cost
     ];
 }
 
@@ -501,7 +515,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
 
         <!-- Overall Stats Banner -->
         <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg p-6 mb-6 shadow-lg">
-            <div class="grid grid-cols-2 md:grid-cols-7 gap-4 text-center">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 text-center">
                 <div>
                     <div class="text-3xl font-bold"><?php echo $total_monthly_meals; ?></div>
                     <div class="text-blue-200 text-sm">Total Meals</div>
@@ -511,8 +525,8 @@ $active_tab = $_GET['tab'] ?? 'daily';
                     <div class="text-blue-200 text-sm">Total Bazar</div>
                 </div>
                 <div class="bg-white/20 rounded-lg p-2">
-                    <div class="text-3xl font-bold text-yellow-300">৳<?php echo number_format($overall_rate, 2); ?></div>
-                    <div class="text-yellow-200 text-sm font-medium">Meal Rate</div>
+                    <div class="text-3xl font-bold text-yellow-300">৳<?php echo number_format($overall_rate + $rice_meal_rate, 2);?></div>
+                    <div class="text-yellow-200 text-sm font-medium">Overall Meal Rate</div>
                 </div>
                 <div>
                     <div class="text-3xl font-bold"><?php echo count($persons); ?></div>
@@ -526,9 +540,9 @@ $active_tab = $_GET['tab'] ?? 'daily';
                     <div class="text-3xl font-bold"><?php echo $total_special_meals; ?></div>
                     <div class="text-blue-200 text-sm">Special Meals</div>
                 </div>
-                <div class="bg-amber-500/30 rounded-lg p-2">
-                    <div class="text-3xl font-bold text-amber-300">৳<?php echo number_format($category_totals['rice'], 0); ?></div>
-                    <div class="text-amber-200 text-sm font-medium">Rice (Person-wise)</div>
+                <div>
+                    <div class="text-3xl font-bold text-amber-200">৳<?php echo number_format($total_rice_cost, 0); ?></div>
+                    <div class="text-amber-200 text-sm">Total Rice</div>
                 </div>
             </div>
         </div>
@@ -667,9 +681,9 @@ $active_tab = $_GET['tab'] ?? 'daily';
                     <span class="text-yellow-600">🥚 Dim (Egg)</span>
                     <span class="text-pink-600">⭐ Special Meal</span>
                     <span class="text-green-600">🥗 Other/Veg</span>
-                    <span class="text-amber-600 font-medium">🍚 Rice (Person-wise Investment)</span>
+                    <span class="text-amber-600 font-medium">🍚 Rice (Shared Cost)</span>
                 </div>
-                <p class="text-xs text-gray-500 mt-2">* Rice cost is NOT shared - it's added to the payer's total only</p>
+                <p class="text-xs text-gray-500 mt-2">* Rice cost is shared among all members based on meals consumed</p>
             </div>
         <?php endif; ?>
 
@@ -834,10 +848,10 @@ $active_tab = $_GET['tab'] ?? 'daily';
                                 <td class="font-medium">৳<?php echo number_format($other_rate, 2); ?></td>
                             </tr>
                             <tr class="excel-row bg-amber-50">
-                                <td class="text-left">🍚 Rice (Chal) <span class="text-xs text-amber-600 font-bold">- Person-wise</span></td>
-                                <td class="text-amber-600 font-medium">৳<?php echo number_format($category_totals['rice'], 0); ?></td>
-                                <td class="text-gray-400">N/A</td>
-                                <td class="text-gray-400">N/A</td>
+                                <td class="text-left">🍚 Rice (Chal) <span class="text-xs text-amber-600 font-bold">- Shared Cost</span></td>
+                                <td class="text-amber-600 font-medium">৳<?php echo number_format($total_rice_cost, 0); ?></td>
+                                <td class="text-amber-700 font-medium"><?php echo $total_rice_meals; ?></td>
+                                <td class="font-bold text-amber-700 bg-amber-100">৳<?php echo number_format($rice_meal_rate, 2); ?></td>
                             </tr>
                         </tbody>
                         <tfoot>
@@ -934,7 +948,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                             <th class="excel-header">🥗 Cost</th>
                             <th class="excel-header">⭐ Meals</th>
                             <th class="excel-header">⭐ Cost</th>
-                            <th class="excel-header bg-amber-600">🍚 Rice Paid</th>
+                            <th class="excel-header bg-amber-700">🍚 Rice Cost</th>
                             <th class="excel-header">Total Meals</th>
                             <th class="excel-header">Total Cost</th>
                         </tr>
@@ -945,7 +959,8 @@ $active_tab = $_GET['tab'] ?? 'daily';
                         $total_fish_cost = 0;
                         $total_dim_cost = 0;
                         $total_other_cost = 0;
-                        $total_rice_cost = 0;
+                        $total_rice_paid_sum = 0;
+                        $total_rice_cost_sum = 0;
                         $total_special_cost = 0;
                         $total_overall_cost = 0;
                         $total_all_meals_dist = 0;
@@ -955,7 +970,8 @@ $active_tab = $_GET['tab'] ?? 'daily';
                             $total_fish_cost += $data['fish_cost'];
                             $total_dim_cost += $data['dim_cost'];
                             $total_other_cost += $data['other_cost'];
-                            $total_rice_cost += $data['rice_cost'];
+                            $total_rice_paid_sum += $data['rice_paid'];
+                            $total_rice_cost_sum += $data['rice_cost'];
                             $total_special_cost += $data['special_cost'];
                             $total_overall_cost += $data['total_cost'];
                             $total_all_meals_dist += $data['total_meals'];
@@ -971,7 +987,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                                 <td class="text-green-600">৳<?php echo number_format($data['other_cost'], 0); ?></td>
                                 <td class="text-pink-600"><?php echo $data['special_meals']; ?></td>
                                 <td class="text-pink-600">৳<?php echo number_format($data['special_cost'], 0); ?></td>
-                                <td class="text-amber-600 font-medium bg-amber-50">৳<?php echo number_format($data['rice_cost'], 0); ?></td>
+                                <td class="text-amber-700 font-medium bg-amber-100">৳<?php echo number_format($data['rice_cost'], 0); ?></td>
                                 <td class="font-medium"><?php echo $data['total_meals']; ?></td>
                                 <td class="font-bold">৳<?php echo number_format($data['total_cost'], 0); ?></td>
                             </tr>
@@ -989,7 +1005,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                             <td class="font-bold text-green-600">৳<?php echo number_format($total_other_cost, 0); ?></td>
                             <td class="font-bold"><?php echo $total_special_meals; ?></td>
                             <td class="font-bold text-pink-600">৳<?php echo number_format($total_special_cost, 0); ?></td>
-                            <td class="font-bold text-amber-600 bg-amber-100">৳<?php echo number_format($total_rice_cost, 0); ?></td>
+                            <td class="font-bold text-amber-700 bg-amber-200">৳<?php echo number_format($total_rice_cost_sum, 0); ?></td>
                             <td class="font-bold"><?php echo $total_all_meals_dist; ?></td>
                             <td class="font-bold">৳<?php echo number_format($total_overall_cost, 0); ?></td>
                         </tr>
@@ -1006,7 +1022,17 @@ $active_tab = $_GET['tab'] ?? 'daily';
                     <li>• <strong>Dim Cost:</strong> Person's dim meals × ৳<?php echo number_format($dim_rate, 2); ?>/meal</li>
                     <li>• <strong>Other Cost:</strong> Person's ALL meals × ৳<?php echo number_format($other_rate, 2); ?>/meal (shared cost)</li>
                     <li>• <strong>Special Cost:</strong> Person's special meals × ৳<?php echo number_format($special_rate, 2); ?>/meal</li>
+                    <li class="bg-amber-100 p-2 rounded mt-2">
+                        <strong class="text-amber-800">🍚 Rice Cost:</strong> Person's total meals × ৳<?php echo number_format($rice_meal_rate, 2); ?>/meal 
+                        <span class="text-amber-600">(Rice is shared based on meals eaten)</span>
+                    </li>
                 </ul>
+                <div class="mt-3 pt-3 border-t border-blue-200">
+                    <p class="text-blue-600 text-xs">
+                        <strong>Note:</strong> Rice Cost is calculated based on meals consumed and included in Total Cost.
+                        Rice investments are tracked separately and flow into the Balance Sheet.
+                    </p>
+                </div>
             </div>
         <?php endif; ?>
 
@@ -1018,7 +1044,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                         <tr>
                             <th class="excel-header">Name</th>
                             <th class="excel-header">Total Paid</th>
-                            <th class="excel-header bg-amber-600">Rice Paid</th>
+                            <th class="excel-header bg-amber-600">🍚 Rice Paid</th>
                             <th class="excel-header">Should Pay</th>
                             <th class="excel-header">Balance</th>
                             <th class="excel-header">Status</th>
@@ -1028,12 +1054,14 @@ $active_tab = $_GET['tab'] ?? 'daily';
                         <?php 
                         $total_paid = 0;
                         $total_should = 0;
-                        $total_rice_paid = 0;
+                        $total_rice_paid_bs = 0;
+                        $total_rice_cost_bs = 0;
                         
                         foreach ($balance_sheet as $pid => $data): 
                             $total_paid += $data['total_paid'];
                             $total_should += $data['should_pay'];
-                            $total_rice_paid += $data['rice_cost'];
+                            $total_rice_paid_bs += $data['rice_paid'];
+                            $total_rice_cost_bs += $data['rice_cost'];
                             
                             $balance_class = 'zero';
                             $status = '⚖️ Settled';
@@ -1048,7 +1076,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                             <tr class="excel-row">
                                 <td class="text-left font-medium"><?php echo htmlspecialchars($data['name']); ?></td>
                                 <td class="text-green-600 font-medium">৳<?php echo number_format($data['total_paid'], 0); ?></td>
-                                <td class="text-amber-600 font-medium bg-amber-50">৳<?php echo number_format($data['rice_cost'], 0); ?></td>
+                                <td class="text-amber-500 bg-amber-50">৳<?php echo number_format($data['rice_paid'], 0); ?></td>
                                 <td class="text-red-600 font-medium">৳<?php echo number_format($data['should_pay'], 0); ?></td>
                                 <td class="<?php echo $balance_class; ?>">
                                     <?php 
@@ -1069,7 +1097,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                         <tr class="total-row">
                             <td class="font-bold text-left">TOTAL</td>
                             <td class="font-bold text-green-600">৳<?php echo number_format($total_paid, 0); ?></td>
-                            <td class="font-bold text-amber-600 bg-amber-100">৳<?php echo number_format($total_rice_paid, 0); ?></td>
+                            <td class="font-bold text-amber-500 bg-amber-50">৳<?php echo number_format($total_rice_paid_bs, 0); ?></td>
                             <td class="font-bold text-red-600">৳<?php echo number_format($total_should, 0); ?></td>
                             <td class="font-bold">৳<?php echo number_format($total_paid - $total_should, 0); ?></td>
                             <td></td>
@@ -1094,6 +1122,12 @@ $active_tab = $_GET['tab'] ?? 'daily';
                         <span class="w-4 h-4 bg-gray-400 rounded mr-2"></span>
                         <span><strong class="zero">৳0</strong> = Account is settled</span>
                     </div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-gray-300">
+                    <p class="text-gray-600 text-xs">
+                        <strong>🍚 Rice Paid:</strong> Amount invested for rice (included in Total Paid) | 
+                        <strong>Should Pay:</strong> Includes calculated rice cost (৳<?php echo number_format($rice_meal_rate, 2); ?>/meal)
+                    </p>
                 </div>
             </div>
             
