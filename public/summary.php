@@ -65,11 +65,7 @@ while ($row = $bazar_result->fetch_assoc()) {
     $date = $row['bazar_date'];
     $cat = $row['category'];
     $amt = floatval($row['total_amount']);
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
     if (!isset($bazar_by_date[$date])) {
         $bazar_by_date[$date] = [
             'chicken' => 0,
@@ -138,15 +134,9 @@ $stmt->close();
 $total_bazar = array_sum($category_totals);
 
 // Meal-based bazar excludes rice
-<<<<<<< HEAD
 $meal_based_bazar = $category_totals['chicken'] + $category_totals['fish']
     + $category_totals['dim'] + $category_totals['other']
     + $category_totals['special'];
-=======
-$meal_based_bazar = $category_totals['chicken'] + $category_totals['fish'] 
-                  + $category_totals['dim'] + $category_totals['other'] 
-                  + $category_totals['special'];
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
 
 $person_meals_sql = "
     SELECT 
@@ -189,35 +179,21 @@ while ($row = $person_meals_result->fetch_assoc()) {
     $session = $row['session'];
     $type = $row['meal_type'];
     $count = $row['meal_count'];
-<<<<<<< HEAD
 
     if (!isset($person_meals[$pid]))
         continue;
 
-=======
-    
-    if (!isset($person_meals[$pid])) continue;
-    
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
     $key = $session . '_' . $type;
     if (isset($person_meals[$pid][$key])) {
         $person_meals[$pid][$key] = $count;
     }
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
     if ($session === 'lunch') {
         $person_meals[$pid]['total_lunch'] += $count;
     } else {
         $person_meals[$pid]['total_dinner'] += $count;
     }
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
     // Track special meals
     if ($type === 'special') {
         $person_meals[$pid]['special_meals'] += $count;
@@ -263,7 +239,6 @@ $stmt->execute();
 $meal_totals_result = $stmt->get_result();
 
 $meal_totals = [
-<<<<<<< HEAD
     'lunch_chicken' => 0,
     'lunch_fish' => 0,
     'lunch_dim' => 0,
@@ -274,10 +249,6 @@ $meal_totals = [
     'dinner_dim' => 0,
     'dinner_other' => 0,
     'dinner_special' => 0
-=======
-    'lunch_chicken' => 0, 'lunch_fish' => 0, 'lunch_dim' => 0, 'lunch_other' => 0, 'lunch_special' => 0,
-    'dinner_chicken' => 0, 'dinner_fish' => 0, 'dinner_dim' => 0, 'dinner_other' => 0, 'dinner_special' => 0
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
 ];
 $total_all_meals = 0;
 
@@ -327,36 +298,21 @@ foreach ($person_meals as $pid => $data) {
     $person_regular = $data['total_lunch'] + $data['total_dinner'];
     $person_special = $data['special_meals'];
     $person_total_meals = $person_regular; // Total meals for this person (includes special in regular count already)
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
     $chicken_cost = $person_chicken * $chicken_rate;
     $fish_cost = $person_fish * $fish_rate;
     $dim_cost = $person_dim * $dim_rate;
     $other_cost = $person_regular * $other_rate;
     $special_cost = $person_special * $special_rate;
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
     // Rice cost is calculated based on meals eaten (not rice paid)
     // Person Rice Cost = Person Total Meals × Rice Meal Rate
     $rice_cost_calculated = $person_total_meals * $rice_meal_rate;
     $rice_paid = $rice_costs[$pid] ?? 0; // Investment tracking
-<<<<<<< HEAD
 
     // Total cost includes calculated rice cost (not rice paid)
     $total_person_cost = $chicken_cost + $fish_cost + $dim_cost + $other_cost + $special_cost + $rice_cost_calculated;
 
-=======
-    
-    // Total cost includes calculated rice cost (not rice paid)
-    $total_person_cost = $chicken_cost + $fish_cost + $dim_cost + $other_cost + $special_cost + $rice_cost_calculated;
-    
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
     $cost_distribution[$pid] = [
         'name' => $data['name'],
         'chicken_meals' => $person_chicken,
@@ -403,11 +359,7 @@ foreach ($cost_distribution as $pid => $data) {
     $paid = $payments[$pid] ?? 0;
     $should_pay = $data['total_cost'];
     $balance = $paid - $should_pay;
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
     $balance_sheet[$pid] = [
         'name' => $data['name'],
         'total_paid' => $paid,
@@ -443,11 +395,7 @@ while ($row = $matrix_result->fetch_assoc()) {
     $session = $row['session'];
     $type = $row['meal_type'];
     $count = intval($row['meal_count']);
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
     if (!isset($meal_matrix[$date])) {
         $meal_matrix[$date] = [];
     }
@@ -461,7 +409,6 @@ while ($row = $matrix_result->fetch_assoc()) {
 }
 $stmt->close();
 
-<<<<<<< HEAD
 // Bazar Details Query - Item-wise breakdown for Bazar Details tab
 $bazar_details_sql = "
     SELECT 
@@ -499,8 +446,6 @@ while ($row = $bazar_details_result->fetch_assoc()) {
 }
 $stmt->close();
 
-=======
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
 $meal_type_codes = [
     'chicken' => ['code' => 'C', 'color' => 'text-red-600', 'bg' => 'bg-red-50'],
     'fish' => ['code' => 'F', 'color' => 'text-blue-600', 'bg' => 'bg-blue-50'],
@@ -528,10 +473,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
 
 <!DOCTYPE html>
 <html lang="en">
-<<<<<<< HEAD
 
-=======
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -543,50 +485,33 @@ $active_tab = $_GET['tab'] ?? 'daily';
             color: white;
             border-bottom: 3px solid #1d4ed8;
         }
-<<<<<<< HEAD
 
-=======
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
         .tab-inactive {
             background-color: #e5e7eb;
             color: #4b5563;
         }
-<<<<<<< HEAD
 
         .tab-inactive:hover {
             background-color: #d1d5db;
         }
 
-=======
-        .tab-inactive:hover {
-            background-color: #d1d5db;
-        }
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
         .excel-table {
             border-collapse: collapse;
             width: 100%;
         }
-<<<<<<< HEAD
 
         .excel-table th,
         .excel-table td {
-=======
-        .excel-table th, .excel-table td {
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
             border: 1px solid #d1d5db;
             padding: 8px 12px;
             text-align: center;
         }
-<<<<<<< HEAD
 
-=======
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
         .excel-header {
             background-color: #374151;
             color: white;
             font-weight: 600;
         }
-<<<<<<< HEAD
 
         .excel-row:nth-child(even) {
             background-color: #f9fafb;
@@ -596,19 +521,10 @@ $active_tab = $_GET['tab'] ?? 'daily';
             background-color: #fef3c7;
         }
 
-=======
-        .excel-row:nth-child(even) {
-            background-color: #f9fafb;
-        }
-        .excel-row:hover {
-            background-color: #fef3c7;
-        }
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
         .total-row {
             background-color: #dbeafe;
             font-weight: 600;
         }
-<<<<<<< HEAD
 
         .positive {
             color: #059669;
@@ -626,13 +542,6 @@ $active_tab = $_GET['tab'] ?? 'daily';
     </style>
 </head>
 
-=======
-        .positive { color: #059669; font-weight: 600; }
-        .negative { color: #dc2626; font-weight: 600; }
-        .zero { color: #6b7280; }
-    </style>
-</head>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
 <body class="bg-gray-100">
     <!-- Navigation Bar -->
     <nav class="bg-blue-600 text-white shadow-lg">
@@ -664,16 +573,8 @@ $active_tab = $_GET['tab'] ?? 'daily';
             </div>
             <form method="GET" class="flex items-center gap-2">
                 <input type="hidden" name="tab" value="<?php echo htmlspecialchars($active_tab); ?>">
-<<<<<<< HEAD
                 <input type="month" name="month" value="<?php echo $selected_month; ?>"
                     class="px-4 py-2 border border-gray-300 rounded-lg" onchange="this.form.submit()">
-=======
-                <input type="month" 
-                       name="month" 
-                       value="<?php echo $selected_month; ?>"
-                       class="px-4 py-2 border border-gray-300 rounded-lg"
-                       onchange="this.form.submit()">
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
             </form>
         </div>
 
@@ -689,12 +590,8 @@ $active_tab = $_GET['tab'] ?? 'daily';
                     <div class="text-blue-200 text-sm">Total Bazar</div>
                 </div>
                 <div class="bg-white/20 rounded-lg p-2">
-<<<<<<< HEAD
                     <div class="text-3xl font-bold text-yellow-300">
                         ৳<?php echo number_format($overall_rate + $rice_meal_rate, 2); ?></div>
-=======
-                    <div class="text-3xl font-bold text-yellow-300">৳<?php echo number_format($overall_rate + $rice_meal_rate, 2);?></div>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                     <div class="text-yellow-200 text-sm font-medium">Overall Meal Rate</div>
                 </div>
                 <div>
@@ -710,12 +607,8 @@ $active_tab = $_GET['tab'] ?? 'daily';
                     <div class="text-blue-200 text-sm">Special Meals</div>
                 </div>
                 <div>
-<<<<<<< HEAD
                     <div class="text-3xl font-bold text-amber-200">৳<?php echo number_format($total_rice_cost, 0); ?>
                     </div>
-=======
-                    <div class="text-3xl font-bold text-amber-200">৳<?php echo number_format($total_rice_cost, 0); ?></div>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                     <div class="text-amber-200 text-sm">Total Rice</div>
                 </div>
             </div>
@@ -723,7 +616,6 @@ $active_tab = $_GET['tab'] ?? 'daily';
 
         <!-- Tab Navigation -->
         <div class="flex border-b border-gray-200 mb-6 overflow-x-auto">
-<<<<<<< HEAD
             <a href="?tab=daily&month=<?php echo $selected_month; ?>"
                 class="px-6 py-3 font-medium rounded-t-lg transition whitespace-nowrap <?php echo $active_tab === 'daily' ? 'tab-active' : 'tab-inactive'; ?>">
                 📋 Daily Meal Log
@@ -748,28 +640,6 @@ $active_tab = $_GET['tab'] ?? 'daily';
                 class="px-6 py-3 font-medium rounded-t-lg transition whitespace-nowrap <?php echo $active_tab === 'bazar_details' ? 'tab-active' : 'tab-inactive'; ?>">
                 🛒 Bazar Details
             </a>
-=======
-            <a href="?tab=daily&month=<?php echo $selected_month; ?>" 
-               class="px-6 py-3 font-medium rounded-t-lg transition whitespace-nowrap <?php echo $active_tab === 'daily' ? 'tab-active' : 'tab-inactive'; ?>">
-                📋 Daily Meal Log
-            </a>
-            <a href="?tab=matrix&month=<?php echo $selected_month; ?>" 
-               class="px-6 py-3 font-medium rounded-t-lg transition whitespace-nowrap <?php echo $active_tab === 'matrix' ? 'tab-active' : 'tab-inactive'; ?>">
-                📅 Meal Matrix
-            </a>
-            <a href="?tab=summary&month=<?php echo $selected_month; ?>" 
-               class="px-6 py-3 font-medium rounded-t-lg transition whitespace-nowrap <?php echo $active_tab === 'summary' ? 'tab-active' : 'tab-inactive'; ?>">
-                📊 Monthly Summary
-            </a>
-            <a href="?tab=cost&month=<?php echo $selected_month; ?>" 
-               class="px-6 py-3 font-medium rounded-t-lg transition whitespace-nowrap <?php echo $active_tab === 'cost' ? 'tab-active' : 'tab-inactive'; ?>">
-                💰 Cost Distribution
-            </a>
-            <a href="?tab=balance&month=<?php echo $selected_month; ?>" 
-               class="px-6 py-3 font-medium rounded-t-lg transition whitespace-nowrap <?php echo $active_tab === 'balance' ? 'tab-active' : 'tab-inactive'; ?>">
-                💳 Balance Sheet
-            </a>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
         </div>
 
         <!-- Daily Meal Log Tab -->
@@ -793,11 +663,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                         </tr>
                     </thead>
                     <tbody>
-<<<<<<< HEAD
                         <?php
-=======
-                        <?php 
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                         $grand_lunch = 0;
                         $grand_dinner = 0;
                         $grand_meals = 0;
@@ -808,43 +674,25 @@ $active_tab = $_GET['tab'] ?? 'daily';
                         $grand_other = 0;
                         $grand_rice = 0;
                         $grand_bazar_total = 0;
-<<<<<<< HEAD
 
-=======
-                        
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                         $current_date = $month_start;
                         while ($current_date <= $month_end):
                             $meal_data = $daily_meals[$current_date] ?? null;
                             $bazar_data = $bazar_by_date[$current_date] ?? null;
-<<<<<<< HEAD
 
                             $lunch = $meal_data['lunch_meals'] ?? 0;
                             $dinner = $meal_data['dinner_meals'] ?? 0;
                             $total = $lunch + $dinner;
 
-=======
-                            
-                            $lunch = $meal_data['lunch_meals'] ?? 0;
-                            $dinner = $meal_data['dinner_meals'] ?? 0;
-                            $total = $lunch + $dinner;
-                            
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                             $chicken = $bazar_data['chicken'] ?? 0;
                             $fish = $bazar_data['fish'] ?? 0;
                             $dim = $bazar_data['dim'] ?? 0;
                             $special = $bazar_data['special'] ?? 0;
                             $other = $bazar_data['other'] ?? 0;
                             $rice = $bazar_data['rice'] ?? 0;
-<<<<<<< HEAD
 
                             $daily_bazar = $chicken + $fish + $dim + $special + $other + $rice;
 
-=======
-                            
-                            $daily_bazar = $chicken + $fish + $dim + $special + $other + $rice;
-                            
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                             $grand_lunch += $lunch;
                             $grand_dinner += $dinner;
                             $grand_meals += $total;
@@ -855,15 +703,9 @@ $active_tab = $_GET['tab'] ?? 'daily';
                             $grand_other += $other;
                             $grand_rice += $rice;
                             $grand_bazar_total += $daily_bazar;
-<<<<<<< HEAD
 
                             $day_name = date('D', strtotime($current_date));
                             ?>
-=======
-                            
-                            $day_name = date('D', strtotime($current_date));
-                        ?>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                             <tr class="excel-row">
                                 <td class="font-medium"><?php echo date('d M', strtotime($current_date)); ?></td>
                                 <td><?php echo $day_name; ?></td>
@@ -876,20 +718,12 @@ $active_tab = $_GET['tab'] ?? 'daily';
                                 <td class="text-pink-600"><?php echo $special ? '৳' . number_format($special, 0) : '-'; ?></td>
                                 <td class="text-green-600"><?php echo $other ? '৳' . number_format($other, 0) : '-'; ?></td>
                                 <td class="text-amber-600"><?php echo $rice ? '৳' . number_format($rice, 0) : '-'; ?></td>
-<<<<<<< HEAD
                                 <td class="font-bold"><?php echo $daily_bazar ? '৳' . number_format($daily_bazar, 0) : '-'; ?>
                                 </td>
                             </tr>
                             <?php
                             $current_date = date('Y-m-d', strtotime($current_date . ' +1 day'));
                         endwhile;
-=======
-                                <td class="font-bold"><?php echo $daily_bazar ? '৳' . number_format($daily_bazar, 0) : '-'; ?></td>
-                            </tr>
-                        <?php 
-                            $current_date = date('Y-m-d', strtotime($current_date . ' +1 day'));
-                        endwhile; 
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                         ?>
                     </tbody>
                     <tfoot>
@@ -909,11 +743,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                     </tfoot>
                 </table>
             </div>
-<<<<<<< HEAD
 
-=======
-            
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
             <!-- Legend -->
             <div class="mt-4 p-4 bg-gray-50 rounded-lg">
                 <h4 class="font-medium mb-2">Legend:</h4>
@@ -936,17 +766,12 @@ $active_tab = $_GET['tab'] ?? 'daily';
                     <h2 class="text-xl font-bold">📅 Monthly Meal Matrix</h2>
                     <p class="text-blue-100 text-sm">Person × Day × Session view of all meals</p>
                 </div>
-<<<<<<< HEAD
 
-=======
-                
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                 <div class="overflow-x-auto">
                     <table class="excel-table" style="min-width: 100%;">
                         <thead>
                             <tr>
                                 <th class="excel-header" rowspan="2" style="min-width: 80px;">Date</th>
-<<<<<<< HEAD
                                 <?php
                                 $person_index = 0;
                                 foreach ($persons as $pid => $name):
@@ -954,15 +779,6 @@ $active_tab = $_GET['tab'] ?? 'daily';
                                     $person_index++;
                                     ?>
                                     <th colspan="2"
-=======
-                                <?php 
-                                $person_index = 0;
-                                foreach ($persons as $pid => $name): 
-                                    $color = $person_colors[$person_index % count($person_colors)];
-                                    $person_index++;
-                                ?>
-                                    <th colspan="2" 
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                                         class="<?php echo $color['bg']; ?> <?php echo $color['text']; ?> font-bold text-center px-4 py-2"
                                         style="min-width: 120px;">
                                         <?php echo strtoupper(htmlspecialchars($name)); ?>
@@ -971,7 +787,6 @@ $active_tab = $_GET['tab'] ?? 'daily';
                             </tr>
                             <tr>
                                 <?php foreach ($persons as $pid => $name): ?>
-<<<<<<< HEAD
                                     <th class="bg-amber-100 text-amber-800 font-medium text-center text-sm px-2 py-1"
                                         style="min-width: 50px;">Day</th>
                                     <th class="bg-indigo-100 text-indigo-800 font-medium text-center text-sm px-2 py-1"
@@ -982,50 +797,26 @@ $active_tab = $_GET['tab'] ?? 'daily';
 
                         <tbody>
                             <?php
-=======
-                                    <th class="bg-amber-100 text-amber-800 font-medium text-center text-sm px-2 py-1" style="min-width: 50px;">Day</th>
-                                    <th class="bg-indigo-100 text-indigo-800 font-medium text-center text-sm px-2 py-1" style="min-width: 50px;">Night</th>
-                                <?php endforeach; ?>
-                            </tr>
-                        </thead>
-                        
-                        <tbody>
-                            <?php 
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                             $current_date = $month_start;
                             while ($current_date <= $month_end):
                                 $day_num = date('j', strtotime($current_date));
                                 $day_name = date('D', strtotime($current_date));
-<<<<<<< HEAD
                                 ?>
-=======
-                            ?>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                                 <tr class="excel-row">
                                     <td class="font-medium text-center text-gray-700" style="white-space: nowrap;">
                                         <?php echo $day_num; ?>
                                         <span class="text-xs text-gray-500"><?php echo $day_name; ?></span>
                                     </td>
-<<<<<<< HEAD
 
                                     <?php
                                     foreach ($persons as $pid => $name):
                                         $lunch_data = $meal_matrix[$current_date][$pid]['lunch'] ?? null;
                                         $dinner_data = $meal_matrix[$current_date][$pid]['dinner'] ?? null;
 
-=======
-                                    
-                                    <?php 
-                                    foreach ($persons as $pid => $name): 
-                                        $lunch_data = $meal_matrix[$current_date][$pid]['lunch'] ?? null;
-                                        $dinner_data = $meal_matrix[$current_date][$pid]['dinner'] ?? null;
-                                        
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                                         $lunch_type = $lunch_data['type'] ?? null;
                                         $lunch_count = $lunch_data['count'] ?? 0;
                                         $dinner_type = $dinner_data['type'] ?? null;
                                         $dinner_count = $dinner_data['count'] ?? 0;
-<<<<<<< HEAD
 
                                         $lunch_info = $lunch_type ? ($meal_type_codes[$lunch_type] ?? ['code' => '?', 'color' => 'text-gray-500', 'bg' => '']) : null;
                                         $dinner_info = $dinner_type ? ($meal_type_codes[$dinner_type] ?? ['code' => '?', 'color' => 'text-gray-500', 'bg' => '']) : null;
@@ -1036,21 +827,10 @@ $active_tab = $_GET['tab'] ?? 'daily';
                                         </td>
                                         <td
                                             class="text-center <?php echo $dinner_info ? $dinner_info['bg'] . ' ' . $dinner_info['color'] . ' font-bold' : 'text-gray-300'; ?>">
-=======
-                                        
-                                        $lunch_info = $lunch_type ? ($meal_type_codes[$lunch_type] ?? ['code' => '?', 'color' => 'text-gray-500', 'bg' => '']) : null;
-                                        $dinner_info = $dinner_type ? ($meal_type_codes[$dinner_type] ?? ['code' => '?', 'color' => 'text-gray-500', 'bg' => '']) : null;
-                                    ?>
-                                        <td class="text-center <?php echo $lunch_info ? $lunch_info['bg'] . ' ' . $lunch_info['color'] . ' font-bold' : 'text-gray-300'; ?>">
-                                            <?php echo ($lunch_count > 0 && $lunch_info) ? $lunch_count . $lunch_info['code'] : '-'; ?>
-                                        </td>
-                                        <td class="text-center <?php echo $dinner_info ? $dinner_info['bg'] . ' ' . $dinner_info['color'] . ' font-bold' : 'text-gray-300'; ?>">
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                                             <?php echo ($dinner_count > 0 && $dinner_info) ? $dinner_count . $dinner_info['code'] : '-'; ?>
                                         </td>
                                     <?php endforeach; ?>
                                 </tr>
-<<<<<<< HEAD
                                 <?php
                                 $current_date = date('Y-m-d', strtotime($current_date . ' +1 day'));
                             endwhile;
@@ -1065,22 +845,6 @@ $active_tab = $_GET['tab'] ?? 'daily';
                                     $person_lunch_count = 0;
                                     $person_dinner_count = 0;
 
-=======
-                            <?php 
-                                $current_date = date('Y-m-d', strtotime($current_date . ' +1 day'));
-                            endwhile; 
-                            ?>
-                        </tbody>
-                        
-                        <tfoot>
-                            <tr class="total-row">
-                                <td class="font-bold">Total</td>
-                                <?php 
-                                foreach ($persons as $pid => $name): 
-                                    $person_lunch_count = 0;
-                                    $person_dinner_count = 0;
-                                    
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                                     foreach ($meal_matrix as $date => $person_meals_data) {
                                         if (isset($person_meals_data[$pid]['lunch'])) {
                                             $person_lunch_count += $person_meals_data[$pid]['lunch']['count'] ?? 0;
@@ -1089,11 +853,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                                             $person_dinner_count += $person_meals_data[$pid]['dinner']['count'] ?? 0;
                                         }
                                     }
-<<<<<<< HEAD
                                     ?>
-=======
-                                ?>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                                     <td class="font-bold text-amber-700 bg-amber-50"><?php echo $person_lunch_count; ?></td>
                                     <td class="font-bold text-indigo-700 bg-indigo-50"><?php echo $person_dinner_count; ?></td>
                                 <?php endforeach; ?>
@@ -1102,11 +862,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                     </table>
                 </div>
             </div>
-<<<<<<< HEAD
 
-=======
-            
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
             <!-- Matrix Legend -->
             <div class="mt-4 p-4 bg-gray-50 rounded-lg">
                 <h4 class="font-medium mb-3">📌 Cell Format: <span class="text-blue-600">COUNT + TYPE CODE</span></h4>
@@ -1139,61 +895,40 @@ $active_tab = $_GET['tab'] ?? 'daily';
                         <tbody>
                             <tr class="excel-row">
                                 <td class="text-left">🍗 Chicken/Meat</td>
-<<<<<<< HEAD
                                 <td class="text-red-600 font-medium">
                                     ৳<?php echo number_format($category_totals['chicken'], 0); ?></td>
-=======
-                                <td class="text-red-600 font-medium">৳<?php echo number_format($category_totals['chicken'], 0); ?></td>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                                 <td><?php echo $chicken_meals; ?></td>
                                 <td class="font-medium">৳<?php echo number_format($chicken_rate, 2); ?></td>
                             </tr>
                             <tr class="excel-row">
                                 <td class="text-left">🐟 Fish</td>
-<<<<<<< HEAD
                                 <td class="text-blue-600 font-medium">
                                     ৳<?php echo number_format($category_totals['fish'], 0); ?></td>
-=======
-                                <td class="text-blue-600 font-medium">৳<?php echo number_format($category_totals['fish'], 0); ?></td>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                                 <td><?php echo $fish_meals; ?></td>
                                 <td class="font-medium">৳<?php echo number_format($fish_rate, 2); ?></td>
                             </tr>
                             <tr class="excel-row">
                                 <td class="text-left">🥚 Dim (Egg)</td>
-<<<<<<< HEAD
                                 <td class="text-yellow-600 font-medium">
                                     ৳<?php echo number_format($category_totals['dim'], 0); ?></td>
-=======
-                                <td class="text-yellow-600 font-medium">৳<?php echo number_format($category_totals['dim'], 0); ?></td>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                                 <td><?php echo $dim_meals; ?></td>
                                 <td class="font-medium">৳<?php echo number_format($dim_rate, 2); ?></td>
                             </tr>
                             <tr class="excel-row">
                                 <td class="text-left">⭐ Special Meal</td>
-<<<<<<< HEAD
                                 <td class="text-pink-600 font-medium">
                                     ৳<?php echo number_format($category_totals['special'], 0); ?></td>
-=======
-                                <td class="text-pink-600 font-medium">৳<?php echo number_format($category_totals['special'], 0); ?></td>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                                 <td><?php echo $total_special_meals; ?></td>
                                 <td class="font-medium">৳<?php echo number_format($special_rate, 2); ?></td>
                             </tr>
                             <tr class="excel-row">
                                 <td class="text-left">🥗 Other/Veg</td>
-<<<<<<< HEAD
                                 <td class="text-green-600 font-medium">
                                     ৳<?php echo number_format($category_totals['other'], 0); ?></td>
-=======
-                                <td class="text-green-600 font-medium">৳<?php echo number_format($category_totals['other'], 0); ?></td>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                                 <td><?php echo $all_regular_meals; ?> <span class="text-xs text-gray-500">(all)</span></td>
                                 <td class="font-medium">৳<?php echo number_format($other_rate, 2); ?></td>
                             </tr>
                             <tr class="excel-row bg-amber-50">
-<<<<<<< HEAD
                                 <td class="text-left">🍚 Rice (Chal) <span class="text-xs text-amber-600 font-bold">- Shared
                                         Cost</span></td>
                                 <td class="text-amber-600 font-medium">৳<?php echo number_format($total_rice_cost, 0); ?>
@@ -1201,12 +936,6 @@ $active_tab = $_GET['tab'] ?? 'daily';
                                 <td class="text-amber-700 font-medium"><?php echo $total_rice_meals; ?></td>
                                 <td class="font-bold text-amber-700 bg-amber-100">
                                     ৳<?php echo number_format($rice_meal_rate, 2); ?></td>
-=======
-                                <td class="text-left">🍚 Rice (Chal) <span class="text-xs text-amber-600 font-bold">- Shared Cost</span></td>
-                                <td class="text-amber-600 font-medium">৳<?php echo number_format($total_rice_cost, 0); ?></td>
-                                <td class="text-amber-700 font-medium"><?php echo $total_rice_meals; ?></td>
-                                <td class="font-bold text-amber-700 bg-amber-100">৳<?php echo number_format($rice_meal_rate, 2); ?></td>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                             </tr>
                         </tbody>
                         <tfoot>
@@ -1223,6 +952,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                         </tfoot>
                     </table>
                 </div>
+
                 <!-- Meal Type Summary -->
                 <div class="bg-white rounded-lg shadow-md p-6">
                     <h3 class="text-lg font-bold mb-4 text-gray-800">🍽️ Meal Type Summary</h3>
@@ -1246,13 +976,9 @@ $active_tab = $_GET['tab'] ?? 'daily';
                                 <td><?php echo $meal_totals['lunch_dim']; ?></td>
                                 <td><?php echo $meal_totals['lunch_other']; ?></td>
                                 <td><?php echo $meal_totals['lunch_special']; ?></td>
-<<<<<<< HEAD
                                 <td class="font-medium">
                                     <?php echo $meal_totals['lunch_chicken'] + $meal_totals['lunch_fish'] + $meal_totals['lunch_dim'] + $meal_totals['lunch_other'] + $meal_totals['lunch_special']; ?>
                                 </td>
-=======
-                                <td class="font-medium"><?php echo $meal_totals['lunch_chicken'] + $meal_totals['lunch_fish'] + $meal_totals['lunch_dim'] + $meal_totals['lunch_other'] + $meal_totals['lunch_special']; ?></td>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                             </tr>
                             <tr class="excel-row">
                                 <td class="text-left font-medium">🌙 Dinner</td>
@@ -1261,13 +987,9 @@ $active_tab = $_GET['tab'] ?? 'daily';
                                 <td><?php echo $meal_totals['dinner_dim']; ?></td>
                                 <td><?php echo $meal_totals['dinner_other']; ?></td>
                                 <td><?php echo $meal_totals['dinner_special']; ?></td>
-<<<<<<< HEAD
                                 <td class="font-medium">
                                     <?php echo $meal_totals['dinner_chicken'] + $meal_totals['dinner_fish'] + $meal_totals['dinner_dim'] + $meal_totals['dinner_other'] + $meal_totals['dinner_special']; ?>
                                 </td>
-=======
-                                <td class="font-medium"><?php echo $meal_totals['dinner_chicken'] + $meal_totals['dinner_fish'] + $meal_totals['dinner_dim'] + $meal_totals['dinner_other'] + $meal_totals['dinner_special']; ?></td>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                             </tr>
                         </tbody>
                         <tfoot>
@@ -1284,11 +1006,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                     </table>
                 </div>
             </div>
-<<<<<<< HEAD
 
-=======
-            
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
             <!-- Overall Meal Rate -->
             <div class="mt-6 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg p-6 shadow-lg text-center">
                 <h3 class="text-xl font-bold text-white mb-2">📊 Overall Meal Rate (Excludes Rice)</h3>
@@ -1324,11 +1042,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                         </tr>
                     </thead>
                     <tbody>
-<<<<<<< HEAD
                         <?php
-=======
-                        <?php 
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                         $total_chicken_cost = 0;
                         $total_fish_cost = 0;
                         $total_dim_cost = 0;
@@ -1338,13 +1052,8 @@ $active_tab = $_GET['tab'] ?? 'daily';
                         $total_special_cost = 0;
                         $total_overall_cost = 0;
                         $total_all_meals_dist = 0;
-<<<<<<< HEAD
 
                         foreach ($cost_distribution as $pid => $data):
-=======
-                        
-                        foreach ($cost_distribution as $pid => $data): 
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                             $total_chicken_cost += $data['chicken_cost'];
                             $total_fish_cost += $data['fish_cost'];
                             $total_dim_cost += $data['dim_cost'];
@@ -1354,11 +1063,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                             $total_special_cost += $data['special_cost'];
                             $total_overall_cost += $data['total_cost'];
                             $total_all_meals_dist += $data['total_meals'];
-<<<<<<< HEAD
                             ?>
-=======
-                        ?>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                             <tr class="excel-row">
                                 <td class="text-left font-medium"><?php echo htmlspecialchars($data['name']); ?></td>
                                 <td><?php echo $data['chicken_meals']; ?></td>
@@ -1370,12 +1075,8 @@ $active_tab = $_GET['tab'] ?? 'daily';
                                 <td class="text-green-600">৳<?php echo number_format($data['other_cost'], 0); ?></td>
                                 <td class="text-pink-600"><?php echo $data['special_meals']; ?></td>
                                 <td class="text-pink-600">৳<?php echo number_format($data['special_cost'], 0); ?></td>
-<<<<<<< HEAD
                                 <td class="text-amber-700 font-medium bg-amber-100">
                                     ৳<?php echo number_format($data['rice_cost'], 0); ?></td>
-=======
-                                <td class="text-amber-700 font-medium bg-amber-100">৳<?php echo number_format($data['rice_cost'], 0); ?></td>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                                 <td class="font-medium"><?php echo $data['total_meals']; ?></td>
                                 <td class="font-bold">৳<?php echo number_format($data['total_cost'], 0); ?></td>
                             </tr>
@@ -1393,28 +1094,19 @@ $active_tab = $_GET['tab'] ?? 'daily';
                             <td class="font-bold text-green-600">৳<?php echo number_format($total_other_cost, 0); ?></td>
                             <td class="font-bold"><?php echo $total_special_meals; ?></td>
                             <td class="font-bold text-pink-600">৳<?php echo number_format($total_special_cost, 0); ?></td>
-<<<<<<< HEAD
                             <td class="font-bold text-amber-700 bg-amber-200">
                                 ৳<?php echo number_format($total_rice_cost_sum, 0); ?></td>
-=======
-                            <td class="font-bold text-amber-700 bg-amber-200">৳<?php echo number_format($total_rice_cost_sum, 0); ?></td>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                             <td class="font-bold"><?php echo $total_all_meals_dist; ?></td>
                             <td class="font-bold">৳<?php echo number_format($total_overall_cost, 0); ?></td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
-<<<<<<< HEAD
 
-=======
-            
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
             <!-- Cost Calculation Explanation -->
             <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <h4 class="font-bold text-blue-800 mb-2">💡 How Costs Are Calculated</h4>
                 <ul class="text-blue-700 text-sm space-y-1">
-<<<<<<< HEAD
                     <li>• <strong>Chicken Cost:</strong> Person's chicken meals ×
                         ৳<?php echo number_format($chicken_rate, 2); ?>/meal</li>
                     <li>• <strong>Fish Cost:</strong> Person's fish meals ×
@@ -1428,15 +1120,6 @@ $active_tab = $_GET['tab'] ?? 'daily';
                     <li class="bg-amber-100 p-2 rounded mt-2">
                         <strong class="text-amber-800">🍚 Rice Cost:</strong> Person's total meals ×
                         ৳<?php echo number_format($rice_meal_rate, 2); ?>/meal
-=======
-                    <li>• <strong>Chicken Cost:</strong> Person's chicken meals × ৳<?php echo number_format($chicken_rate, 2); ?>/meal</li>
-                    <li>• <strong>Fish Cost:</strong> Person's fish meals × ৳<?php echo number_format($fish_rate, 2); ?>/meal</li>
-                    <li>• <strong>Dim Cost:</strong> Person's dim meals × ৳<?php echo number_format($dim_rate, 2); ?>/meal</li>
-                    <li>• <strong>Other Cost:</strong> Person's ALL meals × ৳<?php echo number_format($other_rate, 2); ?>/meal (shared cost)</li>
-                    <li>• <strong>Special Cost:</strong> Person's special meals × ৳<?php echo number_format($special_rate, 2); ?>/meal</li>
-                    <li class="bg-amber-100 p-2 rounded mt-2">
-                        <strong class="text-amber-800">🍚 Rice Cost:</strong> Person's total meals × ৳<?php echo number_format($rice_meal_rate, 2); ?>/meal 
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                         <span class="text-amber-600">(Rice is shared based on meals eaten)</span>
                     </li>
                 </ul>
@@ -1457,17 +1140,12 @@ $active_tab = $_GET['tab'] ?? 'daily';
                         <tr>
                             <th class="excel-header">Name</th>
                             <th class="excel-header">Total Paid</th>
-<<<<<<< HEAD
-=======
-                            <th class="excel-header bg-amber-600">🍚 Rice Paid</th>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                             <th class="excel-header">Should Pay</th>
                             <th class="excel-header">Balance</th>
                             <th class="excel-header">Status</th>
                         </tr>
                     </thead>
                     <tbody>
-<<<<<<< HEAD
                         <?php
                         $total_paid = 0;
                         $total_should = 0;
@@ -1476,20 +1154,6 @@ $active_tab = $_GET['tab'] ?? 'daily';
                             $total_paid += $data['total_paid'];
                             $total_should += $data['should_pay'];
 
-=======
-                        <?php 
-                        $total_paid = 0;
-                        $total_should = 0;
-                        $total_rice_paid_bs = 0;
-                        $total_rice_cost_bs = 0;
-                        
-                        foreach ($balance_sheet as $pid => $data): 
-                            $total_paid += $data['total_paid'];
-                            $total_should += $data['should_pay'];
-                            $total_rice_paid_bs += $data['rice_paid'];
-                            $total_rice_cost_bs += $data['rice_cost'];
-                            
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                             $balance_class = 'zero';
                             $status = '⚖️ Settled';
                             if ($data['balance'] > 0.01) {
@@ -1499,7 +1163,6 @@ $active_tab = $_GET['tab'] ?? 'daily';
                                 $balance_class = 'negative';
                                 $status = '❌ To Pay';
                             }
-<<<<<<< HEAD
                             ?>
                             <tr class="excel-row">
                                 <td class="text-left font-medium"><?php echo htmlspecialchars($data['name']); ?></td>
@@ -1508,16 +1171,6 @@ $active_tab = $_GET['tab'] ?? 'daily';
                                 <td class="text-red-600 font-medium">৳<?php echo number_format($data['should_pay'], 0); ?></td>
                                 <td class="<?php echo $balance_class; ?>">
                                     <?php
-=======
-                        ?>
-                            <tr class="excel-row">
-                                <td class="text-left font-medium"><?php echo htmlspecialchars($data['name']); ?></td>
-                                <td class="text-green-600 font-medium">৳<?php echo number_format($data['total_paid'], 0); ?></td>
-                                <td class="text-amber-500 bg-amber-50">৳<?php echo number_format($data['rice_paid'], 0); ?></td>
-                                <td class="text-red-600 font-medium">৳<?php echo number_format($data['should_pay'], 0); ?></td>
-                                <td class="<?php echo $balance_class; ?>">
-                                    <?php 
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                                     if ($data['balance'] > 0) {
                                         echo '+৳' . number_format($data['balance'], 0);
                                     } elseif ($data['balance'] < 0) {
@@ -1535,10 +1188,6 @@ $active_tab = $_GET['tab'] ?? 'daily';
                         <tr class="total-row">
                             <td class="font-bold text-left">TOTAL</td>
                             <td class="font-bold text-green-600">৳<?php echo number_format($total_paid, 0); ?></td>
-<<<<<<< HEAD
-=======
-                            <td class="font-bold text-amber-500 bg-amber-50">৳<?php echo number_format($total_rice_paid_bs, 0); ?></td>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                             <td class="font-bold text-red-600">৳<?php echo number_format($total_should, 0); ?></td>
                             <td class="font-bold">৳<?php echo number_format($total_paid - $total_should, 0); ?></td>
                             <td></td>
@@ -1546,11 +1195,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                     </tfoot>
                 </table>
             </div>
-<<<<<<< HEAD
 
-=======
-            
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
             <!-- Balance Legend -->
             <div class="mt-4 p-4 bg-gray-50 rounded-lg">
                 <h4 class="font-medium mb-2">Understanding Balance:</h4>
@@ -1570,21 +1215,12 @@ $active_tab = $_GET['tab'] ?? 'daily';
                 </div>
                 <div class="mt-3 pt-3 border-t border-gray-300">
                     <p class="text-gray-600 text-xs">
-<<<<<<< HEAD
                         <strong>Should Pay:</strong> Includes calculated rice cost
                         (৳<?php echo number_format($rice_meal_rate, 2); ?>/meal) distributed based on meals eaten.
                     </p>
                 </div>
             </div>
 
-=======
-                        <strong>🍚 Rice Paid:</strong> Amount invested for rice (included in Total Paid) | 
-                        <strong>Should Pay:</strong> Includes calculated rice cost (৳<?php echo number_format($rice_meal_rate, 2); ?>/meal)
-                    </p>
-                </div>
-            </div>
-            
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
             <!-- Settlement Suggestions -->
             <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <h4 class="font-bold text-yellow-800 mb-3">💰 Settlement Suggestions</h4>
@@ -1598,15 +1234,9 @@ $active_tab = $_GET['tab'] ?? 'daily';
                         $debtors[] = ['name' => $data['name'], 'amount' => abs($data['balance'])];
                     }
                 }
-<<<<<<< HEAD
 
                 if (empty($creditors) && empty($debtors)):
                     ?>
-=======
-                
-                if (empty($creditors) && empty($debtors)):
-                ?>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                     <p class="text-yellow-700">✅ All accounts are settled! No pending payments.</p>
                 <?php else: ?>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1615,12 +1245,8 @@ $active_tab = $_GET['tab'] ?? 'daily';
                                 <h5 class="font-medium text-red-700 mb-2">❌ Should Pay:</h5>
                                 <ul class="text-red-600 text-sm space-y-1">
                                     <?php foreach ($debtors as $debtor): ?>
-<<<<<<< HEAD
                                         <li>• <?php echo htmlspecialchars($debtor['name']); ?> →
                                             ৳<?php echo number_format($debtor['amount'], 0); ?></li>
-=======
-                                        <li>• <?php echo htmlspecialchars($debtor['name']); ?> → ৳<?php echo number_format($debtor['amount'], 0); ?></li>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                                     <?php endforeach; ?>
                                 </ul>
                             </div>
@@ -1630,12 +1256,8 @@ $active_tab = $_GET['tab'] ?? 'daily';
                                 <h5 class="font-medium text-green-700 mb-2">✅ Should Receive:</h5>
                                 <ul class="text-green-600 text-sm space-y-1">
                                     <?php foreach ($creditors as $creditor): ?>
-<<<<<<< HEAD
                                         <li>• <?php echo htmlspecialchars($creditor['name']); ?> →
                                             ৳<?php echo number_format($creditor['amount'], 0); ?></li>
-=======
-                                        <li>• <?php echo htmlspecialchars($creditor['name']); ?> → ৳<?php echo number_format($creditor['amount'], 0); ?></li>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
                                     <?php endforeach; ?>
                                 </ul>
                             </div>
@@ -1644,7 +1266,6 @@ $active_tab = $_GET['tab'] ?? 'daily';
                 <?php endif; ?>
             </div>
         <?php endif; ?>
-<<<<<<< HEAD
 
         <!-- Bazar Details Tab -->
         <?php if ($active_tab === 'bazar_details'): ?>
@@ -1938,16 +1559,3 @@ $active_tab = $_GET['tab'] ?? 'daily';
 
 </html>
 <?php $conn->close(); ?>
-=======
-    </div>
-    
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-4 mt-8">
-        <div class="max-w-7xl mx-auto px-4 text-center text-sm">
-            <p>Bachelor Meal System &copy; <?php echo date('Y'); ?> | 📊 Generated on <?php echo date('d M Y, h:i A'); ?></p>
-        </div>
-    </footer>
-</body>
-</html>
-<?php $conn->close(); ?>
->>>>>>> 35f112edd6abb6d005e40b6e2a81677083e2edf7
