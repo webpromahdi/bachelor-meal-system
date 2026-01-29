@@ -161,7 +161,7 @@ Before you begin, make sure you have:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/bachelor-meal-system.git
+git clone https://github.com/webpromahdi/bachelor-meal-system.git
 
 # OR download and extract the ZIP file
 ```
@@ -307,26 +307,6 @@ End of Month:
 └── Balance sheet shows: Ahmed +৳200, Karim -৳150, Rahim -৳50
 ```
 
----
-
-## 📸 Screenshots
-
-> Add your screenshots below
-
-### Dashboard
-![Dashboard](screenshots/dashboard.png)
-
-### Meal Entry Page
-![Meals](screenshots/meals.png)
-
-### Bazar Entry Page
-![Bazar](screenshots/bazar.png)
-
-### Monthly Summary
-![Summary](screenshots/summary.png)
-
-### Balance Sheet
-![Balance](screenshots/balance.png)
 
 ---
 
@@ -401,7 +381,7 @@ We welcome contributions from the community! Here's how you can help:
 
 2. **Clone Your Fork**
    ```bash
-   git clone https://github.com/yourusername/bachelor-meal-system.git
+   git clone https://github.com/webpromahdi/bachelor-meal-system.git
    cd bachelor-meal-system
    ```
 
@@ -438,15 +418,6 @@ We welcome contributions from the community! Here's how you can help:
 - 📖 Update documentation if needed
 - 🎨 Keep UI consistent with existing design
 - 💬 Be respectful in discussions
-
----
-
-## 💬 Support
-
-Having issues or questions?
-
-- 📧 Open an [Issue](https://github.com/yourusername/bachelor-meal-system/issues) on GitHub
-- 🌟 Star this repo if you find it helpful!
 
 ---
 
