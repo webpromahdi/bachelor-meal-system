@@ -302,7 +302,10 @@ foreach ($person_meals as $pid => $data) {
     $chicken_cost = $person_chicken * $chicken_rate;
     $fish_cost = $person_fish * $fish_rate;
     $dim_cost = $person_dim * $dim_rate;
-    $other_cost = $person_regular * $other_rate;
+    // FIX: Other cost applies only to regular meals (excluding special)
+    // other_rate was calculated with all_regular_meals denominator (excludes special)
+    $person_regular_excl_special = $person_regular - $person_special;
+    $other_cost = $person_regular_excl_special * $other_rate;
     $special_cost = $person_special * $special_rate;
 
     // Rice cost is calculated based on meals eaten (not rice paid)
@@ -363,6 +366,7 @@ foreach ($cost_distribution as $pid => $data) {
 
     $balance_sheet[$pid] = [
         'name' => $data['name'],
+        'total_meals' => $data['total_meals'],
         'total_paid' => $paid,
         'should_pay' => $should_pay,
         'balance' => $balance,
@@ -1143,6 +1147,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                     <thead>
                         <tr>
                             <th class="excel-header">Name</th>
+                            <th class="excel-header">Total Meals</th>
                             <th class="excel-header">Total Paid</th>
                             <th class="excel-header">Should Pay</th>
                             <th class="excel-header">Balance</th>
@@ -1153,10 +1158,12 @@ $active_tab = $_GET['tab'] ?? 'daily';
                         <?php
                         $total_paid = 0;
                         $total_should = 0;
+                        $total_all_meals_dist = 0;
 
                         foreach ($balance_sheet as $pid => $data):
                             $total_paid += $data['total_paid'];
                             $total_should += $data['should_pay'];
+                            $total_all_meals_dist += $data['total_meals'];
 
                             $balance_class = 'zero';
                             $status = '⚖️ Settled';
@@ -1170,6 +1177,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                             ?>
                             <tr class="excel-row">
                                 <td class="text-left font-medium"><?php echo htmlspecialchars($data['name']); ?></td>
+                                <td class="font-medium"><?php echo $data['total_meals']; ?></td>
                                 <td class="text-green-600 font-medium">৳<?php echo number_format($data['total_paid'], 0); ?>
                                 </td>
                                 <td class="text-red-600 font-medium">৳<?php echo number_format($data['should_pay'], 0); ?></td>
@@ -1191,6 +1199,7 @@ $active_tab = $_GET['tab'] ?? 'daily';
                     <tfoot>
                         <tr class="total-row">
                             <td class="font-bold text-left">TOTAL</td>
+                            <td class="font-bold"><?php echo $total_all_meals_dist; ?></td>
                             <td class="font-bold text-green-600">৳<?php echo number_format($total_paid, 0); ?></td>
                             <td class="font-bold text-red-600">৳<?php echo number_format($total_should, 0); ?></td>
                             <td class="font-bold">৳<?php echo number_format($total_paid - $total_should, 0); ?></td>
