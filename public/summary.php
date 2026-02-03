@@ -282,10 +282,11 @@ $total_monthly_meals = $all_regular_meals + $total_special_meals;
 $total_meal_based_cost = $meal_based_bazar;
 $overall_rate = ($total_monthly_meals > 0) ? $total_meal_based_cost / $total_monthly_meals : 0;
 
-// Rice meal rate calculation (rice is shared based on total meals eaten)
-// Rice Meal Count = Total Meals (everyone who eats uses rice)
+// Rice meal rate calculation
+// BUSINESS RULE: Special meal eaters do NOT eat rice on that day
+// Therefore: Rice meals = Regular meals ONLY (excludes special meals)
 $total_rice_cost = $category_totals['rice'];
-$total_rice_meals = $total_monthly_meals; // Rice meals = All meals eaten
+$total_rice_meals = $all_regular_meals; // FIX: Rice meals = Regular meals only (NOT special)
 $rice_meal_rate = ($total_rice_meals > 0) ? $total_rice_cost / $total_rice_meals : 0;
 
 // Cost distribution per person
@@ -308,9 +309,10 @@ foreach ($person_meals as $pid => $data) {
     $other_cost = $person_regular_excl_special * $other_rate;
     $special_cost = $person_special * $special_rate;
 
-    // Rice cost is calculated based on meals eaten (not rice paid)
-    // Person Rice Cost = Person Total Meals × Rice Meal Rate
-    $rice_cost_calculated = $person_total_meals * $rice_meal_rate;
+    // FIX: Rice cost is calculated based on rice meals (excludes special meals)
+    // Person Rice Meals = Total Meals - Special Meals
+    $person_rice_meals = $person_total_meals - $person_special;
+    $rice_cost_calculated = $person_rice_meals * $rice_meal_rate;
     $rice_paid = $rice_costs[$pid] ?? 0; // Investment tracking
 
     // Total cost includes calculated rice cost (not rice paid)
