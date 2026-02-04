@@ -27,21 +27,23 @@ if ($person_result) {
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_meals'])) {
-    
+
     // Get GLOBAL meal types (same for everyone)
     $global_lunch_type = $_POST['global_lunch_type'] ?? '';
     $global_dinner_type = $_POST['global_dinner_type'] ?? '';
-    
+
     // Validation: At least one global type should be selected if any counts > 0
     $has_lunch_entries = false;
     $has_dinner_entries = false;
-    
+
     foreach ($persons as $person) {
         $pid = $person['id'];
-        if (intval($_POST['lunch_count'][$pid] ?? 0) > 0) $has_lunch_entries = true;
-        if (intval($_POST['dinner_count'][$pid] ?? 0) > 0) $has_dinner_entries = true;
+        if (intval($_POST['lunch_count'][$pid] ?? 0) > 0)
+            $has_lunch_entries = true;
+        if (intval($_POST['dinner_count'][$pid] ?? 0) > 0)
+            $has_dinner_entries = true;
     }
-    
+
     // Validate that global types are selected for sessions that have entries
     $validation_errors = [];
     if ($has_lunch_entries && empty($global_lunch_type)) {
@@ -50,44 +52,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_meals'])) {
     if ($has_dinner_entries && empty($global_dinner_type)) {
         $validation_errors[] = 'Please select Dinner Meal Type (you have dinner entries)';
     }
-    
+
     if (!empty($validation_errors)) {
         $message = implode('<br>', $validation_errors);
         $message_type = 'error';
     } else {
         // Begin transaction for atomic operation
         $conn->begin_transaction();
-        
+
         try {
             $total_rows_inserted = 0;
-            
+
             // Delete existing entries before re-inserting (allows corrections)
             $delete_sql = "DELETE FROM daily_meals 
                            WHERE meal_date = ? AND person_id = ? AND session = ?";
             $delete_stmt = $conn->prepare($delete_sql);
-            
+
             // guest_count always 0 (guests tracked via increased meal count)
             $insert_sql = "INSERT INTO daily_meals (meal_date, person_id, session, meal_type, guest_count) 
                            VALUES (?, ?, ?, ?, 0)";
             $insert_stmt = $conn->prepare($insert_sql);
-            
+
             if (!$delete_stmt || !$insert_stmt) {
                 throw new Exception('Failed to prepare statements: ' . $conn->error);
             }
-            
+
             // Loop through each person
             foreach ($persons as $person) {
                 $person_id = $person['id'];
-                
+
                 $lunch_count = intval($_POST['lunch_count'][$person_id] ?? 0);
                 $dinner_count = intval($_POST['dinner_count'][$person_id] ?? 0);
-                
+
                 // Process lunch
                 $session_lunch = 'lunch';
-                
+
                 $delete_stmt->bind_param("sis", $selected_date, $person_id, $session_lunch);
                 $delete_stmt->execute();
-                
+
                 // Insert N rows for lunch (using GLOBAL lunch type)
                 if ($lunch_count > 0 && !empty($global_lunch_type)) {
                     for ($i = 0; $i < $lunch_count; $i++) {
@@ -98,13 +100,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_meals'])) {
                         $total_rows_inserted++;
                     }
                 }
-                
+
                 // Process dinner
                 $session_dinner = 'dinner';
-                
+
                 $delete_stmt->bind_param("sis", $selected_date, $person_id, $session_dinner);
                 $delete_stmt->execute();
-                
+
                 // Insert M rows for dinner (using GLOBAL dinner type)
                 if ($dinner_count > 0 && !empty($global_dinner_type)) {
                     for ($i = 0; $i < $dinner_count; $i++) {
@@ -116,15 +118,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_meals'])) {
                     }
                 }
             }
-            
+
             $delete_stmt->close();
             $insert_stmt->close();
-            
+
             $conn->commit();
-            
+
             $message = "✅ Successfully saved {$total_rows_inserted} meal entries for " . date('d M Y', strtotime($selected_date)) . "!";
             $message_type = 'success';
-            
+
         } catch (Exception $e) {
             $conn->rollback();
             $message = '❌ Error: ' . $e->getMessage();
@@ -149,11 +151,11 @@ $load_result = $load_stmt->get_result();
 while ($row = $load_result->fetch_assoc()) {
     $pid = $row['person_id'];
     $session = $row['session'];
-    
+
     if (!isset($existing_data[$pid])) {
         $existing_data[$pid] = ['lunch_count' => 0, 'dinner_count' => 0];
     }
-    
+
     if ($session === 'lunch') {
         $existing_data[$pid]['lunch_count'] = $row['meal_count'];
         // Capture the global lunch type (should be same for all)
@@ -169,10 +171,16 @@ while ($row = $load_result->fetch_assoc()) {
     }
 }
 $load_stmt->close();
+
+// Flag to check if ANY saved data exists for this date
+// If saved data exists, we use saved values (including 0s)
+// If no saved data exists, we use UI default of 1
+$has_saved_data = !empty($existing_data);
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -184,23 +192,28 @@ $load_stmt->close();
             border-collapse: collapse;
             width: 100%;
         }
+
         .excel-table th,
         .excel-table td {
             border: 1px solid #d1d5db;
             padding: 10px 14px;
         }
+
         .excel-table th {
             background-color: #374151;
             color: white;
             font-weight: 600;
             text-align: center;
         }
+
         .excel-table tr:nth-child(even) {
             background-color: #f9fafb;
         }
+
         .excel-table tr:hover {
             background-color: #eff6ff;
         }
+
         .excel-input {
             width: 80px;
             padding: 8px;
@@ -210,31 +223,37 @@ $load_stmt->close();
             font-size: 16px;
             font-weight: 600;
         }
+
         .excel-input:focus {
             outline: none;
             border-color: #3b82f6;
             background-color: #eff6ff;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
         }
+
         .person-name {
             font-weight: 500;
             text-align: left !important;
             background-color: #f3f4f6;
         }
+
         .global-type-card {
             transition: all 0.2s;
             cursor: pointer;
         }
+
         .global-type-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
+
         .global-type-card.selected {
             ring: 3px;
             transform: scale(1.02);
         }
     </style>
 </head>
+
 <body class="bg-gray-100">
     <!-- Navigation Bar -->
     <nav class="bg-blue-600 text-white shadow-lg">
@@ -266,25 +285,24 @@ $load_stmt->close();
 
         <!-- Message Alert -->
         <?php if ($message): ?>
-            <div class="mb-6 p-4 rounded-lg <?php echo $message_type === 'success' ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-red-100 text-red-800 border border-red-300'; ?>">
+            <div
+                class="mb-6 p-4 rounded-lg <?php echo $message_type === 'success' ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-red-100 text-red-800 border border-red-300'; ?>">
                 <?php echo $message; ?>
             </div>
         <?php endif; ?>
 
         <!-- Main Form -->
         <form method="POST">
-            
+
             <!-- Date Picker -->
             <div class="bg-white rounded-lg shadow-md p-4 mb-6">
                 <div class="flex flex-wrap items-center gap-4">
                     <div class="flex items-center space-x-3">
                         <label for="meal_date" class="font-medium text-gray-700">📅 Date:</label>
-                        <input type="date" 
-                               id="meal_date" 
-                               name="meal_date" 
-                               value="<?php echo htmlspecialchars($selected_date); ?>"
-                               class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-medium"
-                               onchange="this.form.submit()">
+                        <input type="date" id="meal_date" name="meal_date"
+                            value="<?php echo htmlspecialchars($selected_date); ?>"
+                            class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-medium"
+                            onchange="this.form.submit()">
                     </div>
                     <div class="text-gray-500 text-lg">
                         <strong><?php echo date('l', strtotime($selected_date)); ?></strong>
@@ -299,18 +317,19 @@ $load_stmt->close();
             </div>
 
             <!-- Global Meal Types (Same for Everyone) -->
-            <div class="bg-gradient-to-r from-amber-50 to-indigo-50 rounded-lg shadow-md p-6 mb-6 border border-gray-200">
+            <div
+                class="bg-gradient-to-r from-amber-50 to-indigo-50 rounded-lg shadow-md p-6 mb-6 border border-gray-200">
                 <h2 class="text-lg font-bold text-gray-800 mb-4">🍽️ Today's Meal Types (Same for Everyone)</h2>
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    
+
                     <!-- Global Lunch Type -->
                     <div class="bg-white rounded-lg p-4 border-2 border-amber-300">
                         <h3 class="font-bold text-amber-700 mb-3 flex items-center">
                             <span class="text-2xl mr-2">☀️</span> Lunch Meal Type
                         </h3>
                         <div class="grid grid-cols-3 gap-2">
-                            <?php 
+                            <?php
                             $lunch_types = [
                                 'fish' => ['icon' => '🐟', 'label' => 'Fish', 'color' => 'blue'],
                                 'chicken' => ['icon' => '🍗', 'label' => 'Chicken', 'color' => 'red'],
@@ -318,12 +337,12 @@ $load_stmt->close();
                                 'other' => ['icon' => '🥗', 'label' => 'Other', 'color' => 'gray'],
                                 'special' => ['icon' => '⭐', 'label' => 'Special Meal', 'color' => 'pink']
                             ];
-                            foreach ($lunch_types as $value => $type): 
+                            foreach ($lunch_types as $value => $type):
                                 $is_selected = ($existing_lunch_type === $value) ? 'checked' : '';
-                            ?>
+                                ?>
                                 <label class="cursor-pointer">
-                                    <input type="radio" name="global_lunch_type" value="<?php echo $value; ?>" 
-                                           class="hidden peer" <?php echo $is_selected; ?>>
+                                    <input type="radio" name="global_lunch_type" value="<?php echo $value; ?>"
+                                        class="hidden peer" <?php echo $is_selected; ?>>
                                     <div class="peer-checked:bg-<?php echo $type['color']; ?>-600 peer-checked:text-white 
                                                 peer-checked:border-<?php echo $type['color']; ?>-700 peer-checked:shadow-lg
                                                 bg-<?php echo $type['color']; ?>-50 text-<?php echo $type['color']; ?>-800 
@@ -336,20 +355,20 @@ $load_stmt->close();
                             <?php endforeach; ?>
                         </div>
                     </div>
-                    
+
                     <!-- Global Dinner Type -->
                     <div class="bg-white rounded-lg p-4 border-2 border-indigo-300">
                         <h3 class="font-bold text-indigo-700 mb-3 flex items-center">
                             <span class="text-2xl mr-2">🌙</span> Dinner Meal Type
                         </h3>
                         <div class="grid grid-cols-3 gap-2">
-                            <?php 
-                            foreach ($lunch_types as $value => $type): 
+                            <?php
+                            foreach ($lunch_types as $value => $type):
                                 $is_selected = ($existing_dinner_type === $value) ? 'checked' : '';
-                            ?>
+                                ?>
                                 <label class="cursor-pointer">
-                                    <input type="radio" name="global_dinner_type" value="<?php echo $value; ?>" 
-                                           class="hidden peer" <?php echo $is_selected; ?>>
+                                    <input type="radio" name="global_dinner_type" value="<?php echo $value; ?>"
+                                        class="hidden peer" <?php echo $is_selected; ?>>
                                     <div class="peer-checked:bg-<?php echo $type['color']; ?>-600 peer-checked:text-white 
                                                 peer-checked:border-<?php echo $type['color']; ?>-700 peer-checked:shadow-lg
                                                 bg-<?php echo $type['color']; ?>-50 text-<?php echo $type['color']; ?>-800 
@@ -362,7 +381,7 @@ $load_stmt->close();
                             <?php endforeach; ?>
                         </div>
                     </div>
-                    
+
                 </div>
             </div>
 
@@ -370,9 +389,10 @@ $load_stmt->close();
             <div class="bg-white rounded-lg shadow-md overflow-hidden">
                 <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
                     <h2 class="text-lg font-bold text-gray-800">📋 Meal Counts Per Person</h2>
-                    <p class="text-sm text-gray-600">Enter how many meals each person ate (including any guests they brought)</p>
+                    <p class="text-sm text-gray-600">Enter how many meals each person ate (including any guests they
+                        brought)</p>
                 </div>
-                
+
                 <div class="overflow-x-auto">
                     <table class="excel-table">
                         <thead>
@@ -391,41 +411,42 @@ $load_stmt->close();
                                     </td>
                                 </tr>
                             <?php else: ?>
-                                <?php foreach ($persons as $index => $person): 
+                                <?php foreach ($persons as $index => $person):
                                     $pid = $person['id'];
-                                    $existing = $existing_data[$pid] ?? ['lunch_count' => 0, 'dinner_count' => 0];
-                                ?>
+                                    // UI Default Logic:
+                                    // - If NO saved data exists for this date: default to 1 (convenience)
+                                    // - If saved data exists: use saved values (including 0 if user saved 0)
+                                    if ($has_saved_data) {
+                                        // Use saved data or 0 for persons not in saved data
+                                        $existing = $existing_data[$pid] ?? ['lunch_count' => 0, 'dinner_count' => 0];
+                                    } else {
+                                        // No saved data for this date - show UI default of 1
+                                        $existing = ['lunch_count' => 1, 'dinner_count' => 1];
+                                    }
+                                    ?>
                                     <tr>
                                         <!-- Row Number -->
                                         <td class="text-center text-gray-500 font-medium">
                                             <?php echo $index + 1; ?>
                                         </td>
-                                        
+
                                         <!-- Person Name (readonly) -->
                                         <td class="person-name text-lg">
                                             <?php echo htmlspecialchars($person['name']); ?>
                                         </td>
-                                        
+
                                         <!-- Lunch Meal Count -->
                                         <td class="text-center bg-amber-50">
-                                            <input type="number" 
-                                                   name="lunch_count[<?php echo $pid; ?>]" 
-                                                   value="<?php echo $existing['lunch_count']; ?>"
-                                                   min="0" 
-                                                   max="20"
-                                                   class="excel-input bg-amber-50 text-amber-800"
-                                                   placeholder="0">
+                                            <input type="number" name="lunch_count[<?php echo $pid; ?>]"
+                                                value="<?php echo $existing['lunch_count']; ?>" min="0" max="20"
+                                                class="excel-input bg-amber-50 text-amber-800" placeholder="0">
                                         </td>
-                                        
+
                                         <!-- Dinner Meal Count -->
                                         <td class="text-center bg-indigo-50">
-                                            <input type="number" 
-                                                   name="dinner_count[<?php echo $pid; ?>]" 
-                                                   value="<?php echo $existing['dinner_count']; ?>"
-                                                   min="0" 
-                                                   max="20"
-                                                   class="excel-input bg-indigo-50 text-indigo-800"
-                                                   placeholder="0">
+                                            <input type="number" name="dinner_count[<?php echo $pid; ?>]"
+                                                value="<?php echo $existing['dinner_count']; ?>" min="0" max="20"
+                                                class="excel-input bg-indigo-50 text-indigo-800" placeholder="0">
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -444,11 +465,11 @@ $load_stmt->close();
 
                 <!-- Submit Button -->
                 <div class="p-4 bg-gray-50 border-t border-gray-200">
-                    <button type="submit" 
-                            name="submit_meals"
-                            class="w-full bg-green-600 text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex items-center justify-center transition">
+                    <button type="submit" name="submit_meals"
+                        class="w-full bg-green-600 text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex items-center justify-center transition">
                         <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7">
+                            </path>
                         </svg>
                         Save All Meals for <?php echo date('d M Y', strtotime($selected_date)); ?>
                     </button>
@@ -460,20 +481,20 @@ $load_stmt->close();
         <div class="mt-6 bg-white rounded-lg shadow-md p-4">
             <h3 class="font-bold text-gray-700 mb-3">⚡ Quick Actions</h3>
             <div class="flex flex-wrap gap-2">
-                <button type="button" onclick="setAllCounts(1, 1)" 
-                        class="px-4 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 text-sm font-medium transition">
+                <button type="button" onclick="setAllCounts(1, 1)"
+                    class="px-4 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 text-sm font-medium transition">
                     Everyone = 1 Lunch + 1 Dinner
                 </button>
-                <button type="button" onclick="setAllCounts(1, 0)" 
-                        class="px-4 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 text-sm font-medium transition">
+                <button type="button" onclick="setAllCounts(1, 0)"
+                    class="px-4 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 text-sm font-medium transition">
                     Everyone = 1 Lunch Only
                 </button>
-                <button type="button" onclick="setAllCounts(0, 1)" 
-                        class="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-lg hover:bg-indigo-200 text-sm font-medium transition">
+                <button type="button" onclick="setAllCounts(0, 1)"
+                    class="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-lg hover:bg-indigo-200 text-sm font-medium transition">
                     Everyone = 1 Dinner Only
                 </button>
-                <button type="button" onclick="setAllCounts(0, 0)" 
-                        class="px-4 py-2 bg-red-100 text-red-800 rounded-lg hover:bg-red-200 text-sm font-medium transition">
+                <button type="button" onclick="setAllCounts(0, 0)"
+                    class="px-4 py-2 bg-red-100 text-red-800 rounded-lg hover:bg-red-200 text-sm font-medium transition">
                     ❌ Clear All
                 </button>
             </div>
@@ -497,15 +518,15 @@ $load_stmt->close();
         function updateTotals() {
             let lunchTotal = 0;
             let dinnerTotal = 0;
-            
+
             document.querySelectorAll('input[name^="lunch_count"]').forEach(input => {
                 lunchTotal += parseInt(input.value) || 0;
             });
-            
+
             document.querySelectorAll('input[name^="dinner_count"]').forEach(input => {
                 dinnerTotal += parseInt(input.value) || 0;
             });
-            
+
             document.getElementById('total-lunch').textContent = lunchTotal;
             document.getElementById('total-dinner').textContent = dinnerTotal;
         }
@@ -521,7 +542,7 @@ $load_stmt->close();
         }
 
         // Add event listeners to all count inputs for real-time updates
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll('.excel-input').forEach(input => {
                 input.addEventListener('input', updateTotals);
             });
@@ -529,5 +550,6 @@ $load_stmt->close();
         });
     </script>
 </body>
+
 </html>
 <?php $conn->close(); ?>
