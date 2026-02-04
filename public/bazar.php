@@ -9,14 +9,13 @@
 
 require_once '../config/database.php';
 
-// Initialize variables
 $message = '';
 $message_type = '';
 $saved_summary = [];
 $selected_date = $_POST['bazar_date'] ?? $_GET['bazar_date'] ?? date('Y-m-d');
 $selected_person = $_POST['paid_by'] ?? $_GET['paid_by'] ?? '';
 
-// Fetch persons for dropdown
+
 $persons = [];
 $person_result = $conn->query("SELECT id, name FROM persons ORDER BY name");
 if ($person_result) {
@@ -26,12 +25,12 @@ if ($person_result) {
     $person_result->free();
 }
 
-// Handle form submission
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
     $bazar_date = $_POST['bazar_date'] ?? '';
     $paid_by = $_POST['paid_by'] ?? '';
 
-    // Get category amounts
+
     $chicken_amount = floatval($_POST['chicken_amount'] ?? 0);
     $fish_amount = floatval($_POST['fish_amount'] ?? 0);
     $dim_amount = floatval($_POST['dim_amount'] ?? 0);
@@ -39,23 +38,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
     $special_amount = floatval($_POST['special_amount'] ?? 0);
     $rice_amount = floatval($_POST['rice_amount'] ?? 0);
 
-    // Validation
+
     if (empty($bazar_date) || empty($paid_by)) {
         $message = 'Please select date and who paid';
         $message_type = 'error';
     } else {
-        // Begin transaction
+
         $conn->begin_transaction();
 
         try {
-            // First, delete existing entries for this date and payer (to allow corrections)
             $delete_sql = "DELETE FROM bazar_items WHERE bazar_date = ? AND paid_by = ?";
             $delete_stmt = $conn->prepare($delete_sql);
             $delete_stmt->bind_param("si", $bazar_date, $paid_by);
             $delete_stmt->execute();
             $delete_stmt->close();
 
-            // Prepare INSERT statement
+
             $insert_sql = "INSERT INTO bazar_items (bazar_date, item_name, category, amount, paid_by) 
                            VALUES (?, ?, ?, ?, ?)";
             $insert_stmt = $conn->prepare($insert_sql);
@@ -137,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
 
             $insert_stmt->close();
 
-            // Commit transaction
+
             $conn->commit();
 
             if ($total_inserted > 0) {
@@ -157,11 +155,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_bazar'])) {
     }
 }
 
-// Load existing bazar data filtered by BOTH date AND person
 $existing_data = [];
 $existing_paid_by = $selected_person;
 
-// Only load data if a person is selected
+
 if (!empty($selected_person)) {
     $load_sql = "SELECT category, SUM(amount) as total_amount, paid_by
                  FROM bazar_items 
@@ -210,15 +207,13 @@ if (!empty($selected_person)) {
         }
     </style>
     <script>
-        // Reload form when "Paid By" dropdown changes
-        // This ensures bazar data is loaded for the specific (date + person) combination
+
         function reloadForPerson(personId) {
             const bazarDate = document.getElementById('bazar_date').value;
-            // Redirect with both date and person as GET parameters
             window.location.href = 'bazar.php?bazar_date=' + encodeURIComponent(bazarDate) + '&paid_by=' + encodeURIComponent(personId);
         }
 
-        // Also update date change to preserve selected person
+
         function reloadForDate(dateValue) {
             const paidBy = document.getElementById('paid_by').value;
             window.location.href = 'bazar.php?bazar_date=' + encodeURIComponent(dateValue) + '&paid_by=' + encodeURIComponent(paidBy);

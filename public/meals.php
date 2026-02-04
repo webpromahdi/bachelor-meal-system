@@ -10,12 +10,11 @@
 
 require_once '../config/database.php';
 
-// Initialize variables
 $message = '';
 $message_type = '';
 $selected_date = $_POST['meal_date'] ?? date('Y-m-d');
 
-// Fetch all persons for the grid
+
 $persons = [];
 $person_result = $conn->query("SELECT id, name FROM persons ORDER BY name");
 if ($person_result) {
@@ -25,14 +24,14 @@ if ($person_result) {
     $person_result->free();
 }
 
-// Handle form submission
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_meals'])) {
 
-    // Get GLOBAL meal types (same for everyone)
+
     $global_lunch_type = $_POST['global_lunch_type'] ?? '';
     $global_dinner_type = $_POST['global_dinner_type'] ?? '';
 
-    // Validation: At least one global type should be selected if any counts > 0
+
     $has_lunch_entries = false;
     $has_dinner_entries = false;
 
@@ -44,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_meals'])) {
             $has_dinner_entries = true;
     }
 
-    // Validate that global types are selected for sessions that have entries
+
     $validation_errors = [];
     if ($has_lunch_entries && empty($global_lunch_type)) {
         $validation_errors[] = 'Please select Lunch Meal Type (you have lunch entries)';
@@ -57,13 +56,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_meals'])) {
         $message = implode('<br>', $validation_errors);
         $message_type = 'error';
     } else {
-        // Begin transaction for atomic operation
+
         $conn->begin_transaction();
 
         try {
             $total_rows_inserted = 0;
-
-            // Delete existing entries before re-inserting (allows corrections)
             $delete_sql = "DELETE FROM daily_meals 
                            WHERE meal_date = ? AND person_id = ? AND session = ?";
             $delete_stmt = $conn->prepare($delete_sql);
@@ -77,20 +74,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_meals'])) {
                 throw new Exception('Failed to prepare statements: ' . $conn->error);
             }
 
-            // Loop through each person
+
             foreach ($persons as $person) {
                 $person_id = $person['id'];
 
                 $lunch_count = intval($_POST['lunch_count'][$person_id] ?? 0);
                 $dinner_count = intval($_POST['dinner_count'][$person_id] ?? 0);
 
-                // Process lunch
+
                 $session_lunch = 'lunch';
 
                 $delete_stmt->bind_param("sis", $selected_date, $person_id, $session_lunch);
                 $delete_stmt->execute();
 
-                // Insert N rows for lunch (using GLOBAL lunch type)
+
                 if ($lunch_count > 0 && !empty($global_lunch_type)) {
                     for ($i = 0; $i < $lunch_count; $i++) {
                         $insert_stmt->bind_param("siss", $selected_date, $person_id, $session_lunch, $global_lunch_type);
@@ -101,13 +98,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_meals'])) {
                     }
                 }
 
-                // Process dinner
+
                 $session_dinner = 'dinner';
 
                 $delete_stmt->bind_param("sis", $selected_date, $person_id, $session_dinner);
                 $delete_stmt->execute();
 
-                // Insert M rows for dinner (using GLOBAL dinner type)
+
                 if ($dinner_count > 0 && !empty($global_dinner_type)) {
                     for ($i = 0; $i < $dinner_count; $i++) {
                         $insert_stmt->bind_param("siss", $selected_date, $person_id, $session_dinner, $global_dinner_type);
@@ -158,13 +155,13 @@ while ($row = $load_result->fetch_assoc()) {
 
     if ($session === 'lunch') {
         $existing_data[$pid]['lunch_count'] = $row['meal_count'];
-        // Capture the global lunch type (should be same for all)
+
         if (empty($existing_lunch_type)) {
             $existing_lunch_type = $row['meal_type'];
         }
     } else {
         $existing_data[$pid]['dinner_count'] = $row['meal_count'];
-        // Capture the global dinner type
+
         if (empty($existing_dinner_type)) {
             $existing_dinner_type = $row['meal_type'];
         }
@@ -172,9 +169,7 @@ while ($row = $load_result->fetch_assoc()) {
 }
 $load_stmt->close();
 
-// Flag to check if ANY saved data exists for this date
-// If saved data exists, we use saved values (including 0s)
-// If no saved data exists, we use UI default of 1
+// Use saved values (including 0s) if saved data exists, otherwise use UI default of 1
 $has_saved_data = !empty($existing_data);
 ?>
 
@@ -413,14 +408,9 @@ $has_saved_data = !empty($existing_data);
                             <?php else: ?>
                                 <?php foreach ($persons as $index => $person):
                                     $pid = $person['id'];
-                                    // UI Default Logic:
-                                    // - If NO saved data exists for this date: default to 1 (convenience)
-                                    // - If saved data exists: use saved values (including 0 if user saved 0)
                                     if ($has_saved_data) {
-                                        // Use saved data or 0 for persons not in saved data
                                         $existing = $existing_data[$pid] ?? ['lunch_count' => 0, 'dinner_count' => 0];
                                     } else {
-                                        // No saved data for this date - show UI default of 1
                                         $existing = ['lunch_count' => 1, 'dinner_count' => 1];
                                     }
                                     ?>
@@ -541,7 +531,6 @@ $has_saved_data = !empty($existing_data);
             updateTotals();
         }
 
-        // Add event listeners to all count inputs for real-time updates
         document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll('.excel-input').forEach(input => {
                 input.addEventListener('input', updateTotals);

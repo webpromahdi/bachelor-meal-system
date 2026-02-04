@@ -2,11 +2,10 @@
 session_start();
 require_once '../config/database.php';
 
-// Initialize variables
 $message = '';
 $message_type = '';
 
-// Fetch persons for dropdown
+
 $persons = [];
 $person_result = $conn->query("SELECT id, name FROM persons ORDER BY name");
 if ($person_result) {
@@ -16,15 +15,15 @@ if ($person_result) {
     $person_result->free();
 }
 
-// Handle form submission
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Get form data
+
     $meal_date = $_POST['meal_date'] ?? '';
     $person_id = $_POST['person_id'] ?? '';
     $day_meal_count = intval($_POST['day_meal_count'] ?? 0);
     $night_meal_count = intval($_POST['night_meal_count'] ?? 0);
-    
-    // Validation
+
+
     if (empty($meal_date) || empty($person_id)) {
         $message = 'Please fill all required fields';
         $message_type = 'error';
@@ -35,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = 'At least one meal count must be greater than 0';
         $message_type = 'error';
     } else {
-        // Get person name for display
+
         $person_name = '';
         foreach ($persons as $p) {
             if ($p['id'] == $person_id) {
@@ -43,8 +42,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
             }
         }
-        
-        // Store in session for next page
+
+
         $_SESSION['meal_entry'] = [
             'meal_date' => $meal_date,
             'person_id' => $person_id,
@@ -52,8 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'day_meal_count' => $day_meal_count,
             'night_meal_count' => $night_meal_count
         ];
-        
-        // Redirect to meal type page
+
+
         header('Location: meal_type.php');
         exit;
     }
@@ -62,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -72,12 +72,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border: 1px solid #d1d5db;
             padding: 8px 12px;
         }
+
         .excel-header {
             background-color: #e5e7eb;
             font-weight: 600;
             border: 1px solid #d1d5db;
             padding: 8px 12px;
         }
+
         .excel-input {
             border: none;
             background: transparent;
@@ -85,12 +87,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 4px;
             text-align: center;
         }
+
         .excel-input:focus {
             outline: 2px solid #3b82f6;
             background: #eff6ff;
         }
     </style>
 </head>
+
 <body class="bg-gray-100">
     <!-- Navigation Bar -->
     <nav class="bg-blue-600 text-white shadow-lg">
@@ -123,19 +127,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <!-- Progress Steps -->
         <div class="flex items-center mb-8">
             <div class="flex items-center">
-                <div class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">1</div>
+                <div class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">1
+                </div>
                 <span class="ml-2 font-medium text-blue-600">Meal Count</span>
             </div>
             <div class="flex-1 h-1 bg-gray-300 mx-4"></div>
             <div class="flex items-center">
-                <div class="bg-gray-300 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center font-bold">2</div>
+                <div class="bg-gray-300 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center font-bold">2
+                </div>
                 <span class="ml-2 text-gray-500">Meal Type</span>
             </div>
         </div>
 
         <!-- Message Alert -->
         <?php if ($message): ?>
-            <div class="mb-6 p-4 rounded-lg <?php echo $message_type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'; ?>">
+            <div
+                class="mb-6 p-4 rounded-lg <?php echo $message_type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'; ?>">
                 <?php echo htmlspecialchars($message); ?>
             </div>
         <?php endif; ?>
@@ -160,14 +167,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <tr>
                             <td class="excel-cell font-medium bg-gray-50">Meal Date *</td>
                             <td class="excel-cell">
-                                <input type="date" 
-                                       name="meal_date" 
-                                       value="<?php echo date('Y-m-d'); ?>"
-                                       class="excel-input"
-                                       required>
+                                <input type="date" name="meal_date" value="<?php echo date('Y-m-d'); ?>"
+                                    class="excel-input" required>
                             </td>
                         </tr>
-                        
+
                         <!-- Person Row -->
                         <tr>
                             <td class="excel-cell font-medium bg-gray-50">Person *</td>
@@ -182,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </select>
                             </td>
                         </tr>
-                        
+
                         <!-- Day Meal Count Row -->
                         <tr>
                             <td class="excel-cell font-medium bg-blue-50">
@@ -190,15 +194,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <p class="text-xs text-gray-500 font-normal">Total eaters including guests</p>
                             </td>
                             <td class="excel-cell bg-blue-50">
-                                <input type="number" 
-                                       name="day_meal_count" 
-                                       value="0"
-                                       min="0"
-                                       max="50"
-                                       class="excel-input text-lg font-bold text-blue-700">
+                                <input type="number" name="day_meal_count" value="0" min="0" max="50"
+                                    class="excel-input text-lg font-bold text-blue-700">
                             </td>
                         </tr>
-                        
+
                         <!-- Night Meal Count Row -->
                         <tr>
                             <td class="excel-cell font-medium bg-purple-50">
@@ -206,12 +206,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <p class="text-xs text-gray-500 font-normal">Total eaters including guests</p>
                             </td>
                             <td class="excel-cell bg-purple-50">
-                                <input type="number" 
-                                       name="night_meal_count" 
-                                       value="0"
-                                       min="0"
-                                       max="50"
-                                       class="excel-input text-lg font-bold text-purple-700">
+                                <input type="number" name="night_meal_count" value="0" min="0" max="50"
+                                    class="excel-input text-lg font-bold text-purple-700">
                             </td>
                         </tr>
                     </tbody>
@@ -219,11 +215,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <!-- Submit Button -->
                 <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                    <button type="submit" 
-                            class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center">
+                    <button type="submit"
+                        class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center">
                         <span>Next: Select Meal Types</span>
                         <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                            </path>
                         </svg>
                     </button>
                 </div>
@@ -242,5 +239,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 </body>
+
 </html>
 <?php $conn->close(); ?>

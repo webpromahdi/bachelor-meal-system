@@ -10,7 +10,7 @@
 
 require_once '../config/database.php';
 
-// Get selected month (default to current month)
+
 $selected_month = $_GET['month'] ?? date('Y-m');
 $month_start = $selected_month . '-01';
 $month_end = date('Y-m-t', strtotime($month_start));
@@ -107,7 +107,7 @@ while ($row = $cat_result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Rice cost by person (person-wise investment)
+
 $rice_by_person_sql = "
     SELECT 
         paid_by,
@@ -133,7 +133,7 @@ $stmt->close();
 
 $total_bazar = array_sum($category_totals);
 
-// Meal-based bazar excludes rice
+
 $meal_based_bazar = $category_totals['chicken'] + $category_totals['fish']
     + $category_totals['dim'] + $category_totals['other']
     + $category_totals['special'];
@@ -153,7 +153,7 @@ $stmt->bind_param("ss", $month_start, $month_end);
 $stmt->execute();
 $person_meals_result = $stmt->get_result();
 
-// Initialize person meals structure
+
 $person_meals = [];
 foreach ($persons as $pid => $name) {
     $person_meals[$pid] = [
@@ -194,7 +194,7 @@ while ($row = $person_meals_result->fetch_assoc()) {
         $person_meals[$pid]['total_dinner'] += $count;
     }
 
-    // Track special meals
+
     if ($type === 'special') {
         $person_meals[$pid]['special_meals'] += $count;
     }
@@ -267,17 +267,17 @@ $dim_meals = $meal_totals['lunch_dim'] + $meal_totals['dinner_dim'];
 $other_meals = $meal_totals['lunch_other'] + $meal_totals['dinner_other'];
 $special_meals = $meal_totals['lunch_special'] + $meal_totals['dinner_special'];
 
-// All regular meals (chicken + fish + dim + other) - excluding special
+
 $all_regular_meals = $chicken_meals + $fish_meals + $dim_meals + $other_meals;
 
-// Category rates
+
 $chicken_rate = ($chicken_meals > 0) ? $category_totals['chicken'] / $chicken_meals : 0;
 $fish_rate = ($fish_meals > 0) ? $category_totals['fish'] / $fish_meals : 0;
 $dim_rate = ($dim_meals > 0) ? $category_totals['dim'] / $dim_meals : 0;
 $other_rate = ($all_regular_meals > 0) ? $category_totals['other'] / $all_regular_meals : 0;
 $special_rate = ($total_special_meals > 0) ? $category_totals['special'] / $total_special_meals : 0;
 
-// Overall meal rate
+
 $total_monthly_meals = $all_regular_meals + $total_special_meals;
 $total_meal_based_cost = $meal_based_bazar;
 $overall_rate = ($total_monthly_meals > 0) ? $total_meal_based_cost / $total_monthly_meals : 0;
@@ -289,7 +289,7 @@ $total_rice_cost = $category_totals['rice'];
 $total_rice_meals = $all_regular_meals; // FIX: Rice meals = Regular meals only (NOT special)
 $rice_meal_rate = ($total_rice_meals > 0) ? $total_rice_cost / $total_rice_meals : 0;
 
-// Cost distribution per person
+
 $cost_distribution = [];
 foreach ($person_meals as $pid => $data) {
     $person_chicken = $data['lunch_chicken'] + $data['dinner_chicken'];
@@ -359,7 +359,7 @@ while ($row = $payments_result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Balance sheet
+
 $balance_sheet = [];
 foreach ($cost_distribution as $pid => $data) {
     $paid = $payments[$pid] ?? 0;
@@ -377,7 +377,7 @@ foreach ($cost_distribution as $pid => $data) {
     ];
 }
 
-// Meal matrix data
+
 $meal_matrix_sql = "
     SELECT 
         meal_date,
@@ -474,7 +474,7 @@ $person_colors = [
     ['bg' => 'bg-cyan-400', 'text' => 'text-gray-800']
 ];
 
-// Get active tab
+
 $active_tab = $_GET['tab'] ?? 'daily';
 ?>
 

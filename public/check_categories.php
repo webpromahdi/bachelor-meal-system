@@ -1,5 +1,5 @@
 <?php
-// Debug script: Check bazar_items categories
+// Debug: check bazar_items categories
 require_once '../config/database.php';
 
 echo "<pre>\n";
@@ -10,9 +10,10 @@ $result = $conn->query($sql);
 
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
-        echo sprintf("%-15s: %3d items, Total: ৳%s\n", 
-            $row['category'], 
-            $row['cnt'], 
+        echo sprintf(
+            "%-15s: %3d items, Total: ৳%s\n",
+            $row['category'],
+            $row['cnt'],
             number_format($row['total'], 0)
         );
     }
@@ -26,9 +27,10 @@ $result2 = $conn->query($sql2);
 
 if ($result2 && $result2->num_rows > 0) {
     while ($row = $result2->fetch_assoc()) {
-        echo sprintf("%s | %-10s | %-20s | ৳%s\n", 
-            $row['bazar_date'], 
-            $row['category'], 
+        echo sprintf(
+            "%s | %-10s | %-20s | ৳%s\n",
+            $row['bazar_date'],
+            $row['category'],
             $row['item_name'],
             number_format($row['amount'], 0)
         );

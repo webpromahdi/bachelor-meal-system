@@ -1,15 +1,15 @@
 <?php
 require_once '../config/database.php';
 
-// Get monthly statistics
+
 $current_month = date('Y-m');
 $year = date('Y');
 $month = date('m');
 
-// Count total persons
+
 $person_count = $conn->query("SELECT COUNT(*) as count FROM persons")->fetch_assoc()['count'];
 
-// Get this month's meal count
+
 $meal_sql = "SELECT SUM(1 + guest_count) as total_meals 
              FROM daily_meals 
              WHERE YEAR(meal_date) = ? AND MONTH(meal_date) = ?";
@@ -20,7 +20,7 @@ $meal_result = $stmt->get_result();
 $month_meals = $meal_result->fetch_assoc()['total_meals'] ?? 0;
 $stmt->close();
 
-// Get this month's bazar total
+
 $bazar_sql = "SELECT SUM(amount) as total_bazar 
               FROM bazar_items 
               WHERE YEAR(bazar_date) = ? AND MONTH(bazar_date) = ?";
@@ -34,12 +34,14 @@ $stmt->close();
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Bachelor Meal System</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gray-50">
     <!-- Navigation Bar -->
     <nav class="bg-blue-600 text-white shadow-lg">
@@ -56,21 +58,17 @@ $stmt->close();
 
                 <!-- Navigation Links -->
                 <div class="flex space-x-4">
-                    <a href="index.php" 
-                       class="px-4 py-2 rounded-lg bg-blue-800">
-                       📊 Dashboard
+                    <a href="index.php" class="px-4 py-2 rounded-lg bg-blue-800">
+                        📊 Dashboard
                     </a>
-                    <a href="meals.php" 
-                       class="px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                       🍽️ Meals
+                    <a href="meals.php" class="px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                        🍽️ Meals
                     </a>
-                    <a href="bazar.php" 
-                       class="px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                       🛒 Bazar
+                    <a href="bazar.php" class="px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                        🛒 Bazar
                     </a>
-                    <a href="summary.php" 
-                       class="px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                       📈 Summary
+                    <a href="summary.php" class="px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                        📈 Summary
                     </a>
                 </div>
 
@@ -118,7 +116,8 @@ $stmt->close();
                 <div class="flex items-center">
                     <div class="text-3xl mr-4">💰</div>
                     <div>
-                        <div class="text-2xl font-bold text-gray-800">BDT <?php echo number_format($month_bazar, 2); ?></div>
+                        <div class="text-2xl font-bold text-gray-800">BDT <?php echo number_format($month_bazar, 2); ?>
+                        </div>
                         <div class="text-sm text-gray-500">Bazar This Month</div>
                     </div>
                 </div>
@@ -130,9 +129,9 @@ $stmt->close();
                     <div class="text-3xl mr-4">📊</div>
                     <div>
                         <div class="text-2xl font-bold text-blue-600">
-                            <?php 
+                            <?php
                             $rate = $month_meals > 0 ? $month_bazar / $month_meals : 0;
-                            echo 'BDT ' . number_format($rate, 2); 
+                            echo 'BDT ' . number_format($rate, 2);
                             ?>
                         </div>
                         <div class="text-sm text-gray-500">Average Meal Rate</div>
@@ -237,5 +236,6 @@ $stmt->close();
         </div>
     </div>
 </body>
+
 </html>
 <?php $conn->close(); ?>
