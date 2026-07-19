@@ -4,6 +4,25 @@
 
 ---
 
+## 📋 Table of Contents
+
+- [What is Bachelor Meal System?](#-what-is-bachelor-meal-system)
+- [Why We Built This Project](#-why-we-built-this-project)
+- [Key Features](#-key-features)
+- [How the System Works](#-how-the-system-works)
+- [Tech Stack](#️-tech-stack)
+- [Screenshots](#-screenshots)
+- [Installation & Setup](#-installation--setup)
+- [Configuration](#️-configuration)
+- [Usage Guide](#-usage-guide)
+- [Project Structure](#-project-structure)
+- [Future Improvements](#-future-improvements)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Acknowledgments](#-acknowledgments)
+
+---
+
 ## 📋 What is Bachelor Meal System?
 
 **Bachelor Meal System** is a web-based application designed to manage daily meals, bazar expenses, and monthly cost calculations for shared living spaces like bachelor flats or hostels.
@@ -33,13 +52,13 @@ In Bangladesh and many South Asian countries, bachelor flats are common. A group
 
 But at the end of the month, **calculating who owes what** becomes a headache:
 
-| Manual Approach Problems | Our Solution |
-|--------------------------|--------------|
-| Forgetting to note meals | One-click meal entry |
-| Lost bazar receipts | Digital expense tracking |
-| Unfair cost distribution | Automatic rate calculation |
-| Arguments over money | Transparent balance sheet |
-| Time wasted on calculations | Instant monthly summary |
+| Manual Approach Problems     | Our Solution                |
+|------------------------------|-----------------------------|
+| Forgetting to note meals     | One-click meal entry        |
+| Lost bazar receipts          | Digital expense tracking    |
+| Unfair cost distribution     | Automatic rate calculation  |
+| Arguments over money         | Transparent balance sheet   |
+| Time wasted on calculations  | Instant monthly summary     |
 
 **This system makes flat life peaceful!** 🏠✨
 
@@ -136,14 +155,30 @@ But at the end of the month, **calculating who owes what** becomes a headache:
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Frontend** | HTML5, CSS3, JavaScript |
-| **Styling** | Tailwind CSS (via CDN) |
-| **Backend** | PHP 8.x |
-| **Database** | MySQL / MariaDB |
-| **Server** | Apache (XAMPP recommended) |
-| **Icons** | Emoji-based UI |
+| Layer          | Technology                         |
+|----------------|------------------------------------|
+| **Frontend**   | HTML5, CSS3, JavaScript            |
+| **Styling**    | Tailwind CSS (via CDN)             |
+| **Backend**    | PHP 8.x                            |
+| **Database**   | MySQL / MariaDB                    |
+| **Server**     | Apache (XAMPP recommended)         |
+| **Icons**      | Emoji-based UI                     |
+
+---
+
+## 📸 Screenshots
+
+### Home Page
+![Home Page](public/photos/screencapture-localhost-bachelor-meal-system-public-index-php-2026-07-19-21_53_35.png)
+
+### Meal Management
+![Meal Management](public/photos/screencapture-localhost-bachelor-meal-system-public-meals-php-2026-07-19-21_53_41.png)
+
+### Bazar Management
+![Bazar Management](public/photos/screencapture-localhost-bachelor-meal-system-public-bazar-php-2026-07-19-21_53_48.png)
+
+### Monthly Summary
+![Monthly Summary](public/photos/screencapture-localhost-bachelor-meal-system-public-summary-php-2026-07-19-21_54_14.png)
 
 ---
 
@@ -186,15 +221,17 @@ Move the folder to: /opt/lampp/htdocs/bachelor-meal-system
 
 1. Open browser and go to: `http://localhost/phpmyadmin`
 2. Click **"New"** to create a new database
-3. Enter database name: `bachelor_meal_db`
+3. Enter database name: `bachelor_meal_system`
 4. Click **"Create"**
 
 ### Step 5: Import Database Schema
 
-1. Select the `bachelor_meal_db` database
+1. Select the `bachelor_meal_system` database
 2. Click **"Import"** tab
 3. Choose file: `sql/schema.sql` from the project folder
 4. Click **"Go"** to import
+
+> **Note:** The schema automatically creates all tables and seeds **7 default members** (Mahdi, Rafi, Riyad, Rakib, Munna, Saif, Munjil). You can add or modify members directly in the `persons` table via phpMyAdmin.
 
 ### Step 6: Configure Database Connection
 
@@ -204,12 +241,12 @@ Edit the database configuration file:
 // File: config/database.php
 
 <?php
-$host = 'localhost';
-$username = 'root';        // Default XAMPP username
-$password = '';            // Default XAMPP password (empty)
-$database = 'bachelor_meal_db';
+$servername = 'localhost';
+$username = 'root';              // Default XAMPP username
+$password = '';                  // Default XAMPP password (empty)
+$database = 'bachelor_meal_system';
 
-$conn = new mysqli($host, $username, $password, $database);
+$conn = new mysqli($servername, $username, $password, $database);
 
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
@@ -233,21 +270,23 @@ http://localhost/bachelor-meal-system/public/
 
 ### Database Settings
 
-| Setting | Default Value | Description |
-|---------|---------------|-------------|
-| Host | `localhost` | Database server |
-| Username | `root` | MySQL username |
-| Password | `` (empty) | MySQL password |
-| Database | `bachelor_meal_db` | Database name |
+| Setting    | Default Value             | Description        |
+|------------|---------------------------|--------------------|
+| Host       | `localhost`               | Database server    |
+| Username   | `root`                    | MySQL username     |
+| Password   | `` (empty)                | MySQL password     |
+| Database   | `bachelor_meal_system`    | Database name      |
 
-### Adding Members
+### Managing Members
 
-Currently, members are added directly via phpMyAdmin:
+The schema seeds **7 default members** automatically on import. To add or modify members:
 
 1. Open `http://localhost/phpmyadmin`
-2. Select `bachelor_meal_db` → `persons` table
-3. Click **"Insert"**
-4. Add member name and click **"Go"**
+2. Select `bachelor_meal_system` → `persons` table
+3. Click **"Insert"** to add a new member, or **"Edit"** to modify
+4. Enter the member name and click **"Go"**
+
+> Members can also be deleted here — all related meal records will be removed automatically (ON DELETE CASCADE).
 
 ---
 
@@ -257,13 +296,16 @@ Currently, members are added directly via phpMyAdmin:
 
 #### 1. Adding Daily Meals
 
-1. Go to **Meals** page
+1. Go to **Meals** page (`meals.php`)
 2. Select the date
-3. For each member, choose:
-   - ✅ Lunch (if they ate)
-   - ✅ Dinner (if they ate)
-   - Meal type (Chicken/Fish/Egg/Other/Special)
-4. Click **Save**
+3. Choose **global lunch type** and **global dinner type** (applies to all members for the day)
+4. For each member, enter:
+   - **Lunch count** — number of lunch meals (0 = didn't eat, 2 = brought 1 guest, etc.)
+   - **Dinner count** — number of dinner meals
+5. Use quick-action buttons: *Everyone = 1 Lunch + 1 Dinner*, *Clear All*, etc.
+6. Click **Save All Meals**
+
+> **Tip:** If a member brought guests, increase their count (e.g., 1 member + 2 guests → enter `3`).
 
 #### 2. Recording Bazar Expenses
 
@@ -307,6 +349,24 @@ End of Month:
 └── Balance sheet shows: Ahmed +৳200, Karim -৳150, Rahim -৳50
 ```
 
+---
+
+## 📁 Project Structure
+
+```
+bachelor-meal-system/
+├── config/
+│   └── database.php          # Database connection settings
+├── public/
+│   ├── index.php             # Home / Dashboard
+│   ├── meals.php             # Meal management page
+│   ├── bazar.php             # Bazar expense page
+│   ├── summary.php           # Monthly summary page
+│   └── photos/               # Project screenshots
+├── sql/
+│   └── schema.sql            # Database schema & seed data
+└── README.md
+```
 
 ---
 
@@ -322,6 +382,7 @@ End of Month:
 - [ ] 🌐 **Multi-language Support** — Bengali interface option
 - [ ] 📤 **Export to PDF/Excel** — Download summary reports
 - [ ] 🔄 **Data Backup** — Automatic cloud backup
+- [ ] ✏️ **Member Management UI** — Add/remove members from the app (without phpMyAdmin)
 
 ### Scalability Ideas
 
@@ -329,42 +390,6 @@ End of Month:
 - Add REST API for mobile app integration
 - Implement real-time updates with WebSockets
 - Multi-flat support for hostel management
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License**.
-
-```
-MIT License
-
-Copyright (c) 2026 Bachelor Meal System
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-**You are free to:**
-- ✅ Use this project for personal or commercial purposes
-- ✅ Modify the code as you need
-- ✅ Distribute copies to others
-- ✅ Include in your own projects
 
 ---
 
@@ -421,6 +446,42 @@ We welcome contributions from the community! Here's how you can help:
 
 ---
 
+## 📄 License
+
+This project is licensed under the **MIT License**.
+
+```
+MIT License
+
+Copyright (c) 2026 Bachelor Meal System
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+**You are free to:**
+- ✅ Use this project for personal or commercial purposes
+- ✅ Modify the code as you need
+- ✅ Distribute copies to others
+- ✅ Include in your own projects
+
+---
+
 ## 🙏 Acknowledgments
 
 - Thanks to all bachelor flat members who inspired this project
@@ -429,10 +490,6 @@ We welcome contributions from the community! Here's how you can help:
 
 ---
 
-<p align="center">
-  Made with ❤️ for hassle-free flat life
-</p>
+<p align="center">Made with ❤️ for hassle-free flat life</p>
 
-<p align="center">
-  <a href="#-bachelor-meal-system">⬆️ Back to Top</a>
-</p>
+<p align="center"><a href="#️-bachelor-meal-system">⬆️ Back to Top</a></p>

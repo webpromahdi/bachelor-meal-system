@@ -6,6 +6,16 @@ CREATE TABLE IF NOT EXISTS persons (
     name VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Insert initial members
+INSERT INTO persons (id, name) VALUES
+(1, 'Mahdi'),
+(2, 'Rafi'),
+(3, 'Riyad'),
+(4, 'Rakib'),
+(5, 'Munna'),
+(6, 'Saif'),
+(7, 'Munjil');
+
 -- meal_type: chicken, fish, dim (egg), other (veg), special
 CREATE TABLE IF NOT EXISTS daily_meals (
     id INT AUTO_INCREMENT PRIMARY KEY,
