@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Person {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  meals       DailyMeal[]
+  bazarItems  BazarItem[]
+  utility     Utility?
+  utilityFund UtilityFund?
+  fines       Fine[]
+}
+
+enum SessionType {
+  LUNCH
+  DINNER
+}
+
+enum MealCategory {
+  CHICKEN
+  FISH
+  DIM
+  OTHER
+  SPECIAL
+}
+
+model DailyMeal {
+  id        Int          @id @default(autoincrement())
+  mealDate  DateTime     @db.Date
+  personId  Int
+  person    Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+  session   SessionType
+  mealType  MealCategory
+  mealCount Int          @default(1)
+
+  @@unique([mealDate, personId, session])
+  @@index([mealDate])
+}
+
+enum BazarCategory {
+  CHICKEN
+  FISH
+  DIM
+  OTHER
+  SPECIAL
+  RICE
+}
+
+model BazarItem {
+  id        Int           @id @default(autoincrement())
+  bazarDate DateTime      @db.Date
+  itemName  String        @default("")
+  category  BazarCategory
+  amount    Decimal       @db.Decimal(10, 2)
+  paidById  Int
+  paidBy    Person        @relation(fields: [paidById], references: [id], onDelete: Cascade)
+
+  @@index([bazarDate])
+}
+
+model Utility {
+  personId Int     @id
+  person   Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+  wifi     Decimal @default(0) @db.Decimal(10, 2)
+  current  Decimal @default(0) @db.Decimal(10, 2)
+  gas      Decimal @default(0) @db.Decimal(10, 2)
+  other    Decimal @default(0) @db.Decimal(10, 2)
+}
+
+model SharedUtility {
+  type      String   @id // "current" or "gas"
+  amount    Decimal  @default(0) @db.Decimal(10, 2)
+  lastReset DateTime @default(now())
+}
+
+model UtilityFund {
+  personId  Int     @id
+  person    Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+  collected Decimal @default(0) @db.Decimal(10, 2)
+}
+
+model Fine {
+  id        Int      @id @default(autoincrement())
+  fineDate  DateTime @db.Date
+  personId  Int
+  person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  fineCount Int      @default(1)
+  amount    Decimal  @default(0) @db.Decimal(10, 2)
+  reason    String?  @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([fineDate, personId])
+  @@index([fineDate])
+}
