@@ -1,13 +1,29 @@
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
+import passport from "passport";
+import "./config/passport";
 import apiRouter from "./routes";
 import { errorHandler } from "./shared/middlewares/errorHandler";
 import { notFoundHandler } from "./shared/middlewares/notFound";
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, postman, mobile) or dynamically mirror caller origin
+      callback(null, true);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(passport.initialize());
 
 // Root health check
 app.get("/", (req, res) => {

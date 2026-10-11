@@ -16,6 +16,23 @@ model Person {
   fines       Fine[]
 }
 
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
 enum SessionType {
   LUNCH
   DINNER
