@@ -8,11 +8,22 @@ export const api = axios.create({
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    Pragma: "no-cache",
+    Expires: "0",
   },
 })
 
-// Automatically attach JWT token from localStorage if present
+// Automatically attach JWT token & cache-buster timestamp parameter for GET requests
 api.interceptors.request.use((config) => {
+  // Prevent browser & proxy disk caching on GET requests
+  if (config.method?.toLowerCase() === "get") {
+    config.params = {
+      ...config.params,
+      _t: Date.now(),
+    }
+  }
+
   const token = localStorage.getItem("auth_token")
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
